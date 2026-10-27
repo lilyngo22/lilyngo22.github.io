@@ -2,33 +2,42 @@
 layout: about
 title: about
 permalink: /
-subtitle: <a href='#'>Affiliations</a>. Address. Contacts. Motto. Etc.
+subtitle: Quantitative Researcher · Pi Associates · Ho Chi Minh City
 
 profile:
   align: right
   image: prof_pic.jpg
-  image_circular: false # crops the image to make it circular
+  image_circular: false
   more_info: >
-    <p>555 your office number</p>
-    <p>123 your address street</p>
-    <p>Your City, State 12345</p>
+    <p>Ho Chi Minh City, Vietnam</p>
+    <p>lilymyngo@gmail.com</p>
 
-selected_papers: true # includes a list of papers marked as "selected={true}"
-social: true # includes social icons at the bottom of the page
+selected_papers: false
+social: false
 
 announcements:
-  enabled: true # includes a list of news items
-  scrollable: true # adds a vertical scroll bar if there are more than 3 news items
-  limit: 5 # leave blank to include all the news in the `_news` folder
+  enabled: false
 
 latest_posts:
-  enabled: true
-  scrollable: true # adds a vertical scroll bar if there are more than 3 new posts items
-  limit: 3 # leave blank to include all the blog posts
+  enabled: false
 ---
 
-Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](https://www.reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
+Hi, I'm Lily, a quantitative researcher at Pi Associates in Ho Chi Minh City. I work on systematic trading strategies for high-frequency futures markets.
 
-Put your address / P.O. box / other info right below your picture. You can also disable any of these elements by editing `profile` property of the YAML header of your `_pages/about.md`. Edit `_bibliography/papers.bib` and Jekyll will render your [publications page](/al-folio/publications/) automatically.
+Most of my work sits where noisy market data meets production. I build predictive models on intraday price and order-flow data, then spend just as much time trying to break them: leakage checks, regime-aware stress tests, and rolling out-of-sample monitoring to catch overfitting before it reaches live capital.
 
-Link to your social media connections, too. This theme is set up to use [Font Awesome icons](https://fontawesome.com/) and [Academicons](https://jpswalsh.github.io/academicons/), like the ones below. Add your Facebook, Twitter, LinkedIn, Google Scholar, or just disable all of them.
+Lately I've been building an LLM multi-agent pipeline that automates strategy research, from hypothesis generation to backtesting. It combines a genetic algorithm with a knowledge graph of past experiments, so the system learns from what has already failed.
+
+**Research interests**
+
+- Market microstructure and order-flow modeling
+- Regime switching and adaptive portfolio methods
+- Model validation, robustness, and overfitting control
+- Stochastic volatility and option pricing
+- LLM agents for research automation
+
+**Background**
+
+I studied Applied Mathematics (Financial Engineering and Risk Management) at International University, VNU-HCM, on a full four-year scholarship. I've presented work on regime-switching contextual bandits for portfolio optimization (ACBES 2025) and on Kolmogorov–Arnold Networks for multi-horizon stock prediction (VSEFI 2025).
+
+This blog is where I write up research notes, methods I find useful, and experiments that didn't work out.
