@@ -1,6 +1,6 @@
 ---
 layout: about
-title: about
+title: About
 permalink: /
 subtitle: Quantitative Researcher · Pi Associates · Ho Chi Minh City
 
