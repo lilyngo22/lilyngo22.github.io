@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="vi" data-lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KAN & Multi-Horizon Forecasting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+<style>
+:root{
+  --bg:#f6f7f8; --fg:#16202b; --muted:#5a6672; --rule:#d6dce2; --panel:#ffffff;
+  --c1:#1d5f7a; --c2:#b07a1c; --c3:#b2443a; --c4:#3c7a52; --soft:#e4eff3;
+  --m-arima:#b07a1c; --m-xgb:#8a7f72; --m-mlp:#3c7a52; --m-lstm:#7a4fa0; --m-kan:#1d5f7a; --m-ens:#b2443a; --m-hyb:#9aa6b2;
+  --display:"IBM Plex Sans",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10161c; --fg:#e2e8ee; --muted:#9aa6b2; --rule:#2a343e; --panel:#161e26;
+  --c1:#6fb6d4; --c2:#e0b061; --c3:#e98a7f; --c4:#82c79a; --soft:#17293a;
+  --m-arima:#e0b061; --m-xgb:#b8ab9c; --m-mlp:#82c79a; --m-lstm:#b99be0; --m-kan:#6fb6d4; --m-ens:#e98a7f; --m-hyb:#5f6c78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161c; --fg:#e2e8ee; --muted:#9aa6b2; --rule:#2a343e; --panel:#161e26;
+  --c1:#6fb6d4; --c2:#e0b061; --c3:#e98a7f; --c4:#82c79a; --soft:#17293a;
+  --m-arima:#e0b061; --m-xgb:#b8ab9c; --m-mlp:#82c79a; --m-lstm:#b99be0; --m-kan:#6fb6d4; --m-ens:#e98a7f; --m-hyb:#5f6c78; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.62;padding:44px 16px 90px}
+html[data-lang="vi"] .en, html[data-lang="en"] .vi{display:none!important}
+.wrap{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:200px minmax(0,1fr);gap:56px}
+nav.toc{position:sticky;top:24px;align-self:start;font-family:var(--display);font-size:13.5px;display:flex;flex-direction:column;gap:7px}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--c1)}
+nav.toc .h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+main{min-width:0;display:flex;flex-direction:column;gap:64px;max-width:800px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4.6vw,42px);font-weight:700;letter-spacing:-.015em}
+h2{font-size:25px;font-weight:600;display:flex;gap:14px;align-items:baseline;padding-top:6px;border-top:1px solid var(--rule)}
+h2 .n{font-family:var(--mono);font-size:14px;color:var(--c1);font-weight:500;min-width:1.4em}
+h3{font-size:18px;font-weight:600;margin-top:10px}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:24px}
+.prose{max-width:70ch}
+.stack{display:flex;flex-direction:column;gap:12px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.meta{font-family:var(--display);font-size:14.5px;color:var(--muted)}
+.back{font-family:var(--display);font-size:14px;color:var(--c1);text-decoration:none}
+.back:hover{text-decoration:underline}
+header{display:flex;flex-direction:column;gap:14px}
+.abstract{background:var(--soft);padding:20px 22px;border-radius:6px;display:flex;flex-direction:column;gap:10px;font-size:17px}
+.abstract b{font-family:var(--display)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-top:4px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--c1);font-variant-numeric:tabular-nums}
+.stat .l{font-family:var(--display);font-size:12.5px;color:var(--muted)}
+.eq{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.note{font-size:15.5px;color:var(--muted)}
+figure{margin:0;display:flex;flex-direction:column;gap:10px}
+.plate{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px;overflow-x:auto}
+.plate svg{display:block;margin:0 auto}
+svg text{font-family:var(--display)}
+figcaption{font-family:var(--display);font-size:13.5px;color:var(--muted);max-width:75ch}
+figcaption b{color:var(--fg)}
+table{border-collapse:collapse;width:100%;font-family:var(--display);font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+.tw{overflow-x:auto}
+ul,ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+li::marker{color:var(--c1)}
+.def{border-left:3px solid var(--c1);padding:4px 0 4px 16px;display:flex;flex-direction:column;gap:8px}
+.def .t{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
+.warn{border-left-color:var(--c3)} .warn .t{color:var(--c3)}
+.amber{border-left-color:var(--c2)} .amber .t{color:var(--c2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.card{border-top:2px solid var(--c1);padding-top:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{margin:0;font-size:16.5px}
+.card p{font-size:16px}
+.review{display:flex;flex-direction:column}
+.ri{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.ri .k{font-family:var(--mono);font-size:13px;color:var(--c3);padding-top:3px}
+.ri h3{margin:0 0 6px;font-size:17px}
+.ri p{font-size:16.5px}
+.sev{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:2px}
+.sev.h{color:var(--c3);border:1px solid var(--c3)} .sev.m{color:var(--c2);border:1px solid var(--c2)} .sev.l{color:var(--muted);border:1px solid var(--muted)}
+code{font-family:var(--mono);font-size:.84em}
+a{color:var(--c1)}
+:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+/* controls */
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--display);font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-weight:600;padding:6px 12px;border:0;background:var(--panel);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--c1);color:var(--panel)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--display);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--rule);border-radius:999px;background:var(--panel);color:var(--fg);cursor:pointer}
+.chip[aria-pressed="false"]{opacity:.4}
+.chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.slider{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:13.5px}
+.slider input{width:180px;accent-color:var(--c1)}
+.readout{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--display);font-size:13px;color:var(--muted)}
+.readout b{font-family:var(--mono);color:var(--fg);font-weight:500}
+.tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-family:var(--display);font-size:12.5px;padding:6px 9px;border-radius:5px;opacity:0;transition:opacity .1s;z-index:30;white-space:nowrap}
+.heat td{text-align:center;font-family:var(--mono);font-size:13px}
+.heat td:first-child,.heat th:first-child{text-align:left;font-family:var(--display)}
+.heat th{text-transform:none;letter-spacing:0}
+.langbar{position:fixed;top:12px;right:12px;z-index:20;display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--panel);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.langbar button{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.04em;padding:7px 14px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.langbar button[aria-pressed="true"]{background:var(--c1);color:var(--panel)}
+@media (max-width:480px){body{font-size:17px}h2{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="langbar" role="group" aria-label="Language / Ngôn ngữ">
+  <button type="button" data-lang="vi" aria-pressed="true">VN</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
+<div class="tip" id="tip"></div>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <div class="h"><span class="vi">Mục lục</span><span class="en">Contents</span></div>
+  <a href="#s1">1 · <span class="vi">Câu hỏi</span><span class="en">Question</span></a>
+  <a href="#s2">2 · <span class="vi">Quy trình</span><span class="en">Pipeline</span></a>
+  <a href="#s3">3 · KAN</a>
+  <a href="#s4">4 · <span class="vi">Các mô hình khác</span><span class="en">Other models</span></a>
+  <a href="#s5">5 · <span class="vi">Dữ liệu</span><span class="en">Data</span></a>
+  <a href="#s6">6 · <span class="vi">Kết quả</span><span class="en">Results</span></a>
+  <a href="#s7">7 · <span class="vi">KAN so với MLP</span><span class="en">KAN vs MLP</span></a>
+  <a href="#s8">8 · <span class="vi">Đánh giá kỹ thuật</span><span class="en">Technical review</span></a>
+  <a href="#s9">9 · <span class="vi">Ý nghĩa</span><span class="en">Implications</span></a>
+  <a href="#s10">10 · <span class="vi">Hướng mở rộng</span><span class="en">Extensions</span></a>
+  <a href="#s11">11 · <span class="vi">Tài liệu</span><span class="en">References</span></a>
+</nav>
+
+<main>
+<header>
+  <a class="back" href="/research/">← Lily Ngo · Research</a>
+  <div class="eyebrow"><span class="vi">Báo cáo nghiên cứu · Vietnam Symposium in Entrepreneurship, Finance &amp; Innovation (VSEFI), 2025</span><span class="en">Research report · Vietnam Symposium in Entrepreneurship, Finance &amp; Innovation (VSEFI), 2025</span></div>
+  <h1><span class="vi">Từ mô hình thống kê truyền thống đến Deep Learning: dự báo đa kỳ hạn trên thị trường chứng khoán Việt Nam</span><span class="en">From Traditional Statistical Models to Modern Deep Learning: Multi-Horizon Stock Market Forecasting in Vietnam</span></h1>
+  <p class="meta">Minh-Chau Pham · Dang-Khoa Nguyen-Le · Thien-My Ngo — AI VIETNAM · <span class="vi">ĐH Khoa học Tự nhiên · ĐH Quốc Tế, ĐHQG-HCM</span><span class="en">University of Science · International University, VNU-HCM</span></p>
+  <div class="abstract">
+    <p class="vi"><b>Tóm tắt.</b> Nghiên cứu so sánh chín mô hình dự báo trên VN-Index và bốn cổ phiếu HoSE (VCB, FPT, HPG, SSI), ở bốn kỳ hạn h = 1, 3, 5 và 20 phiên. Các mô hình gồm ARIMA, XGBoost, MLP, LSTM, mạng Kolmogorov–Arnold (KAN), ba mô hình lai ARIMA + mạng nơ-ron, và một ensemble có trọng số thay đổi theo kỳ hạn. ARIMA tốt nhất ở kỳ hạn một phiên. Ensemble đứng đầu ở kỳ hạn dài, với thứ hạng trung bình 1,2 trên 9 ở h = 20. KAN, dù chỉ dùng cấu hình cơ bản, luôn thuộc nhóm dẫn đầu và vượt LSTM ở 16/20 trường hợp. Ngược lại, các mô hình lai ARIMA + mạng nơ-ron cho kết quả kém nhất ở kỳ hạn dài, trái với nhiều nghiên cứu trên thị trường phát triển. Đây là nghiên cứu đầu tiên đánh giá KAN trên thị trường chứng khoán Việt Nam.</p>
+    <p class="en"><b>Abstract.</b> The study compares nine forecasting models on the VN-Index and four HoSE stocks (VCB, FPT, HPG, SSI) at horizons of 1, 3, 5 and 20 trading days. The models are ARIMA, XGBoost, MLP, LSTM, Kolmogorov–Arnold Networks (KAN), three ARIMA + neural-network hybrids, and an ensemble whose weights shift with the horizon. ARIMA is best one day ahead. The ensemble leads at longer horizons, with an average rank of 1.2 out of 9 at h = 20. KAN, even in a basic configuration, stays in the leading group and beats LSTM in 16 of 20 cases. The ARIMA + neural hybrids, by contrast, are the weakest at long horizons, which runs against much of the evidence from developed markets. This is the first evaluation of KAN on the Vietnamese stock market.</p>
+    <div class="stats">
+      <div class="stat"><span class="v">2,543</span><span class="l"><span class="vi">phiên giao dịch, 2014–2024</span><span class="en">trading days, 2014–2024</span></span></div>
+      <div class="stat"><span class="v">9 × 4</span><span class="l"><span class="vi">mô hình × kỳ hạn</span><span class="en">models × horizons</span></span></div>
+      <div class="stat"><span class="v">1.2</span><span class="l"><span class="vi">hạng TB của Ensemble ở h = 20</span><span class="en">Ensemble avg rank at h = 20</span></span></div>
+      <div class="stat"><span class="v">16/20</span><span class="l"><span class="vi">trường hợp KAN thắng LSTM</span><span class="en">cases where KAN beats LSTM</span></span></div>
+      <div class="stat"><span class="v">±1%</span><span class="l"><span class="vi">chênh lệch RMSE giữa KAN và MLP</span><span class="en">KAN vs MLP RMSE gap</span></span></div>
+    </div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="n">1</span><span class="vi">Câu hỏi nghiên cứu</span><span class="en">Research question</span></h2>
+  <div class="prose stack">
+    <p class="vi">Thị trường Việt Nam có những đặc điểm khiến dự báo khó hơn thị trường phát triển: biến động cao, nhiều nhà đầu tư cá nhân, dòng thông tin nhiễu, và chu kỳ thanh toán T+2,5. Mô hình tuyến tính như ARIMA nắm bắt tốt quán tính ngắn hạn nhưng bỏ lỡ cấu trúc phi tuyến và thay đổi chế độ (regime). Mạng nơ-ron linh hoạt hơn nhưng dễ overfit trên dữ liệu nhiễu.</p>
+    <p class="en">The Vietnamese market has features that make forecasting harder than in developed markets: high volatility, a large retail investor base, noisy information flow, and a T+2.5 settlement cycle. Linear models such as ARIMA capture short-term persistence well but miss nonlinear structure and regime shifts. Neural networks are more flexible but overfit easily on noisy data.</p>
+    <p class="vi">Bài đặt ra ba câu hỏi: (i) mô hình nào tốt nhất ở mỗi kỳ hạn; (ii) KAN, một kiến trúc mới công bố năm 2024, có chỗ đứng gì so với MLP và LSTM; (iii) ghép ARIMA với mạng nơ-ron hoặc lấy trung bình nhiều mô hình có giúp ích không.</p>
+    <p class="en">The paper asks three questions: (i) which model is best at each horizon; (ii) where KAN, an architecture published in 2024, stands against MLP and LSTM; and (iii) whether pairing ARIMA with a neural network, or averaging several models, helps.</p>
+  </div>
+  <div class="def"><span class="t"><span class="vi">Vì sao chọn h = 1, 3, 5, 20</span><span class="en">Why h = 1, 3, 5, 20</span></span>
+    <p class="prose vi">h = 1 là phiên kế tiếp. h = 3 khớp với T+2,5: cổ phiếu mua hôm nay về tài khoản vào phiên thứ ba. h = 5 là một tuần giao dịch, h = 20 là khoảng một tháng, kỳ đánh giá danh mục thường gặp của quỹ.</p>
+    <p class="prose en">h = 1 is the next session. h = 3 matches T+2.5: shares bought today reach the account on the third session. h = 5 is one trading week and h = 20 roughly one month, a common review period for fund portfolios.</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="n">2</span><span class="vi">Quy trình tổng thể</span><span class="en">End-to-end pipeline</span></h2>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 760 300" width="100%" style="min-width:620px;max-width:760px" role="img" aria-label="pipeline">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+        <g font-size="12.5">
+          <rect x="10" y="100" width="140" height="96" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="80" y="128" text-anchor="middle" fill="var(--fg)" font-weight="600">VNI · VCB · FPT</text>
+          <text x="80" y="146" text-anchor="middle" fill="var(--fg)" font-weight="600">HPG · SSI</text>
+          <text x="80" y="166" text-anchor="middle" fill="var(--muted)" font-size="11.5">07/2014 – 09/2024</text>
+          <text x="80" y="182" text-anchor="middle" fill="var(--muted)" font-size="11.5">train 90% · test 10%</text>
+        </g>
+        <line x1="150" y1="148" x2="188" y2="148" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <g font-size="12.5">
+          <rect x="190" y="14" width="200" height="56" rx="5" fill="var(--panel)" stroke="var(--m-arima)"/>
+          <text x="290" y="38" text-anchor="middle" fill="var(--fg)" font-weight="600">ARIMA · XGBoost</text>
+          <text x="290" y="56" text-anchor="middle" fill="var(--muted)" font-size="11.5">linear / tree-based</text>
+          <rect x="190" y="84" width="200" height="56" rx="5" fill="var(--soft)" stroke="var(--m-kan)"/>
+          <text x="290" y="108" text-anchor="middle" fill="var(--fg)" font-weight="600">MLP · LSTM · KAN</text>
+          <text x="290" y="126" text-anchor="middle" fill="var(--muted)" font-size="11.5">neural, min–max (0, 1)</text>
+          <rect x="190" y="154" width="200" height="56" rx="5" fill="var(--panel)" stroke="var(--m-hyb)"/>
+          <text x="290" y="178" text-anchor="middle" fill="var(--fg)" font-weight="600">ARIMA + {MLP, LSTM, KAN}</text>
+          <text x="290" y="196" text-anchor="middle" fill="var(--muted)" font-size="11.5">NN learns ARIMA residuals</text>
+          <rect x="190" y="224" width="200" height="56" rx="5" fill="var(--panel)" stroke="var(--m-ens)"/>
+          <text x="290" y="248" text-anchor="middle" fill="var(--fg)" font-weight="600">Ensemble</text>
+          <text x="290" y="266" text-anchor="middle" fill="var(--muted)" font-size="11.5">horizon-dependent weights</text>
+        </g>
+        <line x1="390" y1="42" x2="470" y2="130" stroke="var(--muted)"/>
+        <line x1="390" y1="112" x2="470" y2="140" stroke="var(--muted)"/>
+        <line x1="390" y1="182" x2="470" y2="156" stroke="var(--muted)"/>
+        <line x1="390" y1="252" x2="470" y2="166" stroke="var(--muted)"/>
+        <line x1="470" y1="148" x2="508" y2="148" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <g font-size="12.5">
+          <rect x="510" y="100" width="110" height="96" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="565" y="128" text-anchor="middle" fill="var(--fg)" font-weight="600">h = 1, 3, 5, 20</text>
+          <text x="565" y="148" text-anchor="middle" fill="var(--muted)" font-size="11.5">direct multi-step</text>
+          <text x="565" y="166" text-anchor="middle" fill="var(--muted)" font-size="11.5">price level</text>
+          <line x1="620" y1="148" x2="638" y2="148" stroke="var(--muted)" marker-end="url(#ar)"/>
+          <rect x="640" y="100" width="110" height="96" rx="5" fill="var(--panel)" stroke="var(--c3)"/>
+          <text x="695" y="128" text-anchor="middle" fill="var(--fg)" font-weight="600">RMSE, R²</text>
+          <text x="695" y="148" text-anchor="middle" fill="var(--muted)" font-size="11.5">test set</text>
+          <text x="695" y="166" text-anchor="middle" fill="var(--muted)" font-size="11.5">5 × 9 × 4 cells</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption class="vi"><b>Hình 1.</b> Năm chuỗi giá, chín mô hình trong bốn nhóm, bốn kỳ hạn. Mỗi ô kết quả là một cặp (RMSE, R²) trên 10% dữ liệu cuối.</figcaption>
+    <figcaption class="en"><b>Figure 1.</b> Five price series, nine models in four families, four horizons. Each result cell is an (RMSE, R²) pair on the final 10% of the data.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="n">3</span><span class="vi">Kolmogorov–Arnold Networks: kiến thức nền</span><span class="en">Kolmogorov–Arnold Networks: the background</span></h2>
+
+  <h3>3.1 <span class="vi">Định lý biểu diễn Kolmogorov–Arnold</span><span class="en">The Kolmogorov–Arnold representation theorem</span></h3>
+  <p class="prose vi">Năm 1957, Kolmogorov chứng minh rằng mọi hàm liên tục nhiều biến \(f:[0,1]^n\to\mathbb{R}\) đều viết được bằng tổng và hợp của các hàm <i>một biến</i>:</p>
+  <p class="prose en">In 1957 Kolmogorov proved that every continuous multivariate function \(f:[0,1]^n\to\mathbb{R}\) can be written using only sums and compositions of <i>univariate</i> functions:</p>
+  <div class="eq">\[ f(x_1,\dots,x_n) = \sum_{q=0}^{2n} \Phi_q\!\Big(\sum_{p=1}^{n} \phi_{q,p}(x_p)\Big). \]</div>
+  <p class="prose vi">Phép cộng là phép toán nhiều biến duy nhất cần dùng. Mọi phi tuyến được đẩy vào các hàm một biến \(\phi_{q,p}\) và \(\Phi_q\). Trong nhiều thập kỷ, định lý này bị xem là vô dụng cho học máy: các hàm trong biểu diễn có thể rất gồ ghề, thậm chí giống fractal, nên không học được bằng gradient (Girosi &amp; Poggio, 1989).</p>
+  <p class="prose en">Addition is the only multivariate operation needed. All nonlinearity is pushed into the one-variable functions \(\phi_{q,p}\) and \(\Phi_q\). For decades the theorem was considered useless for learning: the functions in the representation can be very rough, even fractal-like, and therefore not learnable by gradient descent (Girosi &amp; Poggio, 1989).</p>
+
+  <h3>3.2 <span class="vi">Từ định lý đến mạng: KAN (Liu và cộng sự, 2024)</span><span class="en">From theorem to network: KAN (Liu et al., 2024)</span></h3>
+  <p class="prose vi">Ý tưởng của KAN là không bám vào biểu diễn hai tầng, độ rộng \(2n+1\) của định lý. Thay vào đó, xem công thức trên như một <i>lớp</i> và xếp chồng nhiều lớp với độ rộng tùy ý. Một lớp KAN từ \(n_\ell\) sang \(n_{\ell+1}\) nơ-ron là một ma trận các hàm một biến:</p>
+  <p class="prose en">The idea behind KAN is to drop the theorem's fixed two-layer, width-\(2n+1\) form. Instead, the formula is treated as one <i>layer</i>, and layers of any width are stacked. A KAN layer from \(n_\ell\) to \(n_{\ell+1}\) neurons is a matrix of univariate functions:</p>
+  <div class="eq">\[ x_{\ell+1,j} = \sum_{i=1}^{n_\ell} \phi_{\ell,j,i}\big(x_{\ell,i}\big), \qquad \mathrm{KAN}(\mathbf{x}) = \big(\Phi_{L-1}\circ\cdots\circ\Phi_1\circ\Phi_0\big)(\mathbf{x}). \]</div>
+  <p class="prose vi">So sánh với MLP, nơi phi tuyến là một hàm cố định đặt tại nút và thứ được học là trọng số tuyến tính trên cạnh:</p>
+  <p class="prose en">Compare this with an MLP, where the nonlinearity is a fixed function at each node and what is learned are linear weights on the edges:</p>
+  <div class="eq">\[ \mathrm{MLP}(\mathbf{x}) = \big(W_{L-1}\circ\sigma\circ\cdots\circ\sigma\circ W_0\big)(\mathbf{x}). \]</div>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 720 280" width="100%" style="min-width:560px;max-width:720px" role="img" aria-label="MLP vs KAN">
+        <g font-size="13" font-weight="600" fill="var(--fg)">
+          <text x="170" y="22" text-anchor="middle">MLP</text>
+          <text x="540" y="22" text-anchor="middle">KAN</text>
+        </g>
+        <line x1="355" y1="36" x2="355" y2="262" stroke="var(--rule)"/>
+        <!-- MLP edges -->
+        <g stroke="var(--muted)" stroke-width="1.2">
+          <line x1="80" y1="210" x2="140" y2="110"/><line x1="80" y1="210" x2="200" y2="110"/><line x1="80" y1="210" x2="260" y2="110"/>
+          <line x1="160" y1="210" x2="140" y2="110"/><line x1="160" y1="210" x2="200" y2="110"/><line x1="160" y1="210" x2="260" y2="110"/>
+          <line x1="240" y1="210" x2="140" y2="110"/><line x1="240" y1="210" x2="200" y2="110"/><line x1="240" y1="210" x2="260" y2="110"/>
+          <line x1="140" y1="110" x2="200" y2="52"/><line x1="200" y1="110" x2="200" y2="52"/><line x1="260" y1="110" x2="200" y2="52"/>
+        </g>
+        <g fill="var(--panel)" stroke="var(--fg)" stroke-width="1.4">
+          <circle cx="80" cy="210" r="11"/><circle cx="160" cy="210" r="11"/><circle cx="240" cy="210" r="11"/>
+          <circle cx="200" cy="52" r="11"/>
+        </g>
+        <g fill="var(--soft)" stroke="var(--m-mlp)" stroke-width="1.6">
+          <circle cx="140" cy="110" r="14"/><circle cx="200" cy="110" r="14"/><circle cx="260" cy="110" r="14"/>
+        </g>
+        <g font-size="12" fill="var(--m-mlp)" text-anchor="middle" font-weight="600"><text x="140" y="115">σ</text><text x="200" y="115">σ</text><text x="260" y="115">σ</text></g>
+        <text x="62" y="160" font-size="12" fill="var(--muted)">w</text>
+        <!-- KAN edges with spline glyphs -->
+        <g stroke="var(--m-kan)" stroke-width="1.2" opacity=".55">
+          <line x1="450" y1="210" x2="510" y2="110"/><line x1="450" y1="210" x2="570" y2="110"/><line x1="450" y1="210" x2="630" y2="110"/>
+          <line x1="530" y1="210" x2="510" y2="110"/><line x1="530" y1="210" x2="570" y2="110"/><line x1="530" y1="210" x2="630" y2="110"/>
+          <line x1="610" y1="210" x2="510" y2="110"/><line x1="610" y1="210" x2="570" y2="110"/><line x1="610" y1="210" x2="630" y2="110"/>
+          <line x1="510" y1="110" x2="570" y2="52"/><line x1="570" y1="110" x2="570" y2="52"/><line x1="630" y1="110" x2="570" y2="52"/>
+        </g>
+        <g fill="var(--panel)" stroke="var(--m-kan)" stroke-width="1.3">
+          <rect x="462" y="148" width="26" height="18" rx="3"/><rect x="532" y="148" width="26" height="18" rx="3"/><rect x="602" y="148" width="26" height="18" rx="3"/>
+          <rect x="527" y="70" width="26" height="18" rx="3"/><rect x="587" y="70" width="26" height="18" rx="3"/>
+        </g>
+        <g fill="none" stroke="var(--m-kan)" stroke-width="1.5">
+          <path d="M465,162 C470,150 476,166 480,152 S486,152 486,153"/>
+          <path d="M535,160 C540,162 546,148 556,151"/>
+          <path d="M605,156 C610,150 615,164 625,158"/>
+          <path d="M530,84 C535,86 540,72 550,74"/>
+          <path d="M590,76 C596,86 602,72 610,82"/>
+        </g>
+        <g fill="var(--panel)" stroke="var(--fg)" stroke-width="1.4">
+          <circle cx="450" cy="210" r="11"/><circle cx="530" cy="210" r="11"/><circle cx="610" cy="210" r="11"/>
+          <circle cx="510" cy="110" r="11"/><circle cx="570" cy="110" r="11"/><circle cx="630" cy="110" r="11"/>
+          <circle cx="570" cy="52" r="11"/>
+        </g>
+        <g font-size="12" fill="var(--fg)" text-anchor="middle"><text x="510" y="115">Σ</text><text x="570" y="115">Σ</text><text x="630" y="115">Σ</text><text x="570" y="57">Σ</text></g>
+        <g font-size="12" fill="var(--muted)" text-anchor="middle">
+          <text x="170" y="250" class="vi">trọng số học được trên cạnh,</text><text x="170" y="250" class="en">learnable weights on edges,</text>
+          <text x="170" y="266" class="vi">kích hoạt cố định σ tại nút</text><text x="170" y="266" class="en">fixed activation σ on nodes</text>
+          <text x="540" y="250" class="vi">hàm φ học được (spline) trên cạnh,</text><text x="540" y="250" class="en">learnable functions φ (splines) on edges,</text>
+          <text x="540" y="266" class="vi">nút chỉ cộng</text><text x="540" y="266" class="en">nodes only add</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption class="vi"><b>Hình 2.</b> Khác biệt cốt lõi. MLP học "nhân với bao nhiêu" trên mỗi cạnh; KAN học "biến đổi theo hình dạng nào" trên mỗi cạnh. Mỗi ô nhỏ trên cạnh KAN là một hàm một biến có thể vẽ ra và đọc được.</figcaption>
+    <figcaption class="en"><b>Figure 2.</b> The core difference. An MLP learns "multiply by how much" on each edge; a KAN learns "transform with what shape" on each edge. Each small box on a KAN edge is a univariate function that can be plotted and read.</figcaption>
+  </figure>
+
+  <h3>3.3 <span class="vi">Tham số hóa bằng B-spline</span><span class="en">B-spline parametrisation</span></h3>
+  <p class="prose vi">Mỗi hàm trên cạnh được viết thành một hàm nền cộng với một spline. Hàm nền giữ cho gradient ổn định, phần spline cho phép hình dạng tùy ý:</p>
+  <p class="prose en">Each edge function is written as a base function plus a spline. The base term keeps gradients well-behaved; the spline term allows arbitrary shape:</p>
+  <div class="eq">\[ \phi(x) = w_b\,\mathrm{SiLU}(x) + w_s \sum_{i=0}^{G+k-1} c_i\,B_{i,k}(x), \qquad \mathrm{SiLU}(x) = \frac{x}{1+e^{-x}}. \]</div>
+  <p class="prose vi">Ở đây \(B_{i,k}\) là các hàm cơ sở B-spline bậc \(k\) (thường \(k=3\), spline bậc ba) trên một lưới \(G\) khoảng đều. Thứ được huấn luyện là các hệ số \(c_i\). Hàm cơ sở được tính đệ quy bằng công thức Cox–de Boor:</p>
+  <p class="prose en">Here \(B_{i,k}\) are B-spline basis functions of order \(k\) (usually \(k=3\), cubic) on a grid of \(G\) equal intervals. The coefficients \(c_i\) are what gets trained. The basis is computed recursively by the Cox–de Boor formula:</p>
+  <div class="eq">\[ B_{i,0}(x) = \mathbb{1}[t_i \le x < t_{i+1}], \qquad B_{i,k}(x) = \frac{x - t_i}{t_{i+k} - t_i}B_{i,k-1}(x) + \frac{t_{i+k+1} - x}{t_{i+k+1} - t_{i+1}}B_{i+1,k-1}(x). \]</div>
+  <p class="prose vi">Mỗi \(B_{i,k}\) chỉ khác 0 trên \(k+1\) khoảng lưới, nên mỗi hệ số chỉ ảnh hưởng một vùng nhỏ. Đây là điểm khác MLP: thay đổi một tham số không làm lệch toàn bộ hàm. Nhưng nó cũng có nghĩa là <b>ngoài lưới, spline bằng 0</b>; chỉ còn phần SiLU hoạt động. Điểm này quay lại ở Mục 8.</p>
+  <p class="prose en">Each \(B_{i,k}\) is nonzero on only \(k+1\) grid intervals, so each coefficient affects only a small region. This is a difference from an MLP: changing one parameter does not shift the whole function. It also means that <b>outside the grid the spline is zero</b>, and only the SiLU part is active. This comes back in Section 8.</p>
+
+  <figure>
+    <div class="plate">
+      <div class="stack" style="gap:10px">
+        <div class="ctl">
+          <div class="seg" id="bs-target" role="group" aria-label="target">
+            <button type="button" data-t="smooth" aria-pressed="true"><span class="vi">Trơn</span><span class="en">Smooth</span></button>
+            <button type="button" data-t="kink" aria-pressed="false"><span class="vi">Gãy khúc</span><span class="en">Kink</span></button>
+            <button type="button" data-t="regime" aria-pressed="false"><span class="vi">Đổi chế độ</span><span class="en">Regime</span></button>
+            <button type="button" data-t="noisy" aria-pressed="false"><span class="vi">Có nhiễu</span><span class="en">Noisy</span></button>
+          </div>
+          <label class="slider"><span class="vi">Lưới G</span><span class="en">Grid G</span> <input type="range" id="bs-g" min="2" max="30" value="5"> <b id="bs-gv" style="font-family:var(--mono)">5</b></label>
+        </div>
+        <svg id="bs-svg" viewBox="0 0 680 330" width="100%" style="max-width:680px" role="img" aria-label="B-spline fit"></svg>
+        <div class="readout">
+          <span><span class="vi">Số hệ số trên cạnh</span><span class="en">Coefficients per edge</span>: <b id="bs-np">8</b></span>
+          <span><span class="vi">Sai số so với hàm thật</span><span class="en">Error vs true function</span> (RMSE): <b id="bs-err">–</b></span>
+        </div>
+      </div>
+    </div>
+    <figcaption class="vi"><b>Hình 3 (tương tác).</b> Một hàm cạnh KAN \(\phi(x)=\sum c_iB_{i,3}(x)\) được khớp bằng bình phương tối thiểu. Các đường mờ phía dưới là từng hàm cơ sở B-spline. Tăng G làm khớp tốt hơn với hàm trơn, gãy khúc hay đổi chế độ. Với dữ liệu có nhiễu, G lớn bắt đầu học cả nhiễu: sai số so với hàm thật tăng trở lại. Đây chính là rủi ro overfit của KAN trên chuỗi tài chính.</figcaption>
+    <figcaption class="en"><b>Figure 3 (interactive).</b> One KAN edge function \(\phi(x)=\sum c_iB_{i,3}(x)\) fitted by least squares. The faint curves at the bottom are the individual B-spline basis functions. Raising G improves the fit for smooth, kinked and regime-switching targets. On noisy data a large G starts fitting the noise, and error against the true function rises again. That is KAN's overfitting risk on financial series.</figcaption>
+  </figure>
+
+  <h3>3.4 <span class="vi">Số tham số và tốc độ hội tụ</span><span class="en">Parameter count and convergence</span></h3>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>MLP</th><th>KAN</th></tr></thead>
+    <tbody>
+      <tr><td><span class="vi">Thứ được học</span><span class="en">What is learned</span></td><td><span class="vi">trọng số tuyến tính trên cạnh</span><span class="en">linear weights on edges</span></td><td><span class="vi">hệ số spline trên cạnh</span><span class="en">spline coefficients on edges</span></td></tr>
+      <tr><td><span class="vi">Phi tuyến</span><span class="en">Nonlinearity</span></td><td><span class="vi">cố định (ReLU, tanh…) tại nút</span><span class="en">fixed (ReLU, tanh…) on nodes</span></td><td><span class="vi">học được, khác nhau trên từng cạnh</span><span class="en">learned, different on every edge</span></td></tr>
+      <tr><td><span class="vi">Tham số (độ sâu L, độ rộng N)</span><span class="en">Parameters (depth L, width N)</span></td><td class="num">O(N² L)</td><td class="num">O(N² L (G + k))</td></tr>
+      <tr><td><span class="vi">Độ rộng điển hình</span><span class="en">Typical width</span></td><td><span class="vi">hàng chục đến hàng trăm</span><span class="en">tens to hundreds</span></td><td><span class="vi">vài đến vài chục</span><span class="en">a few to a few dozen</span></td></tr>
+      <tr><td><span class="vi">Diễn giải</span><span class="en">Interpretability</span></td><td><span class="vi">khó; cần SHAP, saliency…</span><span class="en">hard; needs SHAP, saliency…</span></td><td><span class="vi">vẽ trực tiếp từng φ; tỉa và gán công thức ký hiệu</span><span class="en">plot each φ directly; prune and snap to symbolic forms</span></td></tr>
+      <tr><td><span class="vi">Tốc độ huấn luyện</span><span class="en">Training speed</span></td><td><span class="vi">nhanh, tối ưu cho GPU</span><span class="en">fast, GPU-friendly</span></td><td><span class="vi">chậm hơn đáng kể (spline khó song song hóa)</span><span class="en">markedly slower (splines parallelise poorly)</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose vi">Liu và cộng sự chứng minh: nếu hàm mục tiêu có một biểu diễn KA mà các hàm thành phần đủ trơn, thì sai số xấp xỉ bằng spline bậc \(k\) giảm theo \(G^{-(k+1)}\), không phụ thuộc vào số chiều đầu vào. Đây là lý do KAN được kỳ vọng "tránh lời nguyền số chiều". Điều kiện "đủ trơn" là giả định mạnh và chưa chắc đúng với dữ liệu tài chính nhiễu.</p>
+  <p class="prose en">Liu et al. show that if the target has a KA representation whose component functions are smooth enough, the spline approximation error of order \(k\) falls as \(G^{-(k+1)}\), independently of the input dimension. That is why KAN is expected to "beat the curse of dimensionality". The "smooth enough" condition is a strong assumption and need not hold for noisy financial data.</p>
+  <div class="eq">\[ \big\| f - \mathrm{KAN}_G \big\|_{C^m} \;\le\; C\, G^{-k-1+m}. \]</div>
+
+  <h3>3.5 <span class="vi">KAN có gì hấp dẫn cho tài chính</span><span class="en">Why KAN is appealing for finance</span></h3>
+  <div class="cards">
+    <div class="card"><h3><span class="vi">Đọc được hình dạng</span><span class="en">Readable shapes</span></h3><p class="vi">Mỗi φ là một đường cong vẽ được. Ta thấy ngay một đặc trưng tác động tuyến tính, có ngưỡng, hay bão hòa, điều quan trọng với người quản lý rủi ro.</p><p class="en">Every φ is a curve you can plot. You can see directly whether a feature acts linearly, has a threshold, or saturates, which matters to risk managers.</p></div>
+    <div class="card"><h3><span class="vi">Mạng nhỏ</span><span class="en">Small networks</span></h3><p class="vi">Vì mỗi cạnh đã linh hoạt, KAN thường cần ít nút hơn MLP cho cùng độ chính xác. Ít tham số hơn có thể nghĩa là ít overfit hơn trên chuỗi ngắn.</p><p class="en">Because each edge is already flexible, KAN often needs far fewer nodes than an MLP for the same accuracy. Fewer parameters can mean less overfitting on short series.</p></div>
+    <div class="card"><h3><span class="vi">Tỉa và ký hiệu hóa</span><span class="en">Pruning and symbolic fits</span></h3><p class="vi">Với điều chuẩn L1 và entropy, các cạnh yếu bị tỉa. Hàm còn lại có thể được gán dạng như \(x^2\), \(\sin\), \(\log\), cho ra một công thức tường minh.</p><p class="en">With L1 and entropy regularisation, weak edges are pruned. The remaining functions can be snapped to forms like \(x^2\), \(\sin\), \(\log\), giving an explicit formula.</p></div>
+    <div class="card"><h3><span class="vi">Điểm yếu cần biết</span><span class="en">Known weaknesses</span></h3><p class="vi">Huấn luyện chậm hơn, nhạy với nhiễu khi G lớn, và spline chỉ xác định trên một miền hữu hạn. Với chuỗi giá có xu hướng, đầu vào kỳ test có thể nằm ngoài miền đó.</p><p class="en">Slower training, sensitivity to noise when G is large, and splines defined only on a bounded range. For trending price series, test-period inputs can fall outside that range.</p></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="n">4</span><span class="vi">Các mô hình còn lại</span><span class="en">The other models</span></h2>
+  <h3>4.1 ARIMA(p, d, q)</h3>
+  <p class="prose vi">Sau khi lấy sai phân \(d\) lần để chuỗi dừng (kiểm định ADF), ARIMA mô hình hóa giá trị hiện tại theo các giá trị và sai số quá khứ. Bậc \((p,d,q)\) được chọn bằng AIC; với VN-Index ở h = 1, bậc tốt nhất là ARIMA(1,1,1).</p>
+  <p class="prose en">After differencing \(d\) times to make the series stationary (ADF test), ARIMA models the current value from past values and past errors. The order \((p,d,q)\) is chosen by AIC; for the VN-Index at h = 1 the best order is ARIMA(1,1,1).</p>
+  <div class="eq">\[ \Big(1-\sum_{i=1}^{p}\varphi_i L^i\Big)(1-L)^d y_t = \Big(1+\sum_{j=1}^{q}\vartheta_j L^j\Big)\varepsilon_t. \]</div>
+  <h3>4.2 XGBoost</h3>
+  <p class="prose vi">Tổng của \(K\) cây hồi quy, mỗi cây khớp phần dư của các cây trước, với phạt độ phức tạp \(\Omega\). Đầu vào là các giá trị trễ. Cấu hình: độ sâu 3, 20 cây.</p>
+  <p class="prose en">A sum of \(K\) regression trees, each fitted to the residual of the earlier ones, with a complexity penalty \(\Omega\). Inputs are lagged values. Configuration: depth 3, 20 trees.</p>
+  <div class="eq">\[ \hat y_i = \sum_{k=1}^{K} f_k(\mathbf{x}_i), \qquad \mathcal{L} = \sum_i \ell(\hat y_i, y_i) + \sum_k \Omega(f_k). \]</div>
+  <h3>4.3 LSTM</h3>
+  <p class="prose vi">Mạng hồi quy có các cổng quên, cổng vào và cổng ra để giữ thông tin dài hạn trong trạng thái ô \(S_t\). Cấu hình: encoder LSTM 128 đơn vị, decoder MLP 128 đơn vị.</p>
+  <p class="prose en">A recurrent network with forget, input and output gates that preserve long-range information in a cell state \(S_t\). Configuration: an LSTM encoder with 128 units and an MLP decoder with 128 units.</p>
+  <div class="eq">\[ S_t = f_t\odot S_{t-1} + i_t\odot \tanh\!\big(W_C[h_{t-1},x_t]+b_C\big), \qquad h_t = o_t\odot\tanh(S_t). \]</div>
+  <h3>4.4 <span class="vi">Mô hình lai ARIMA + mạng nơ-ron</span><span class="en">ARIMA + neural hybrids</span></h3>
+  <p class="prose vi">Theo Zhang (2003), chuỗi được tách thành phần tuyến tính \(L_t\) và phần phi tuyến \(N_t\). ARIMA ước lượng \(L_t\); mạng nơ-ron (MLP, LSTM hoặc KAN) học phần dư \(e_t = y_t - \hat L_t\); hai dự báo được cộng lại.</p>
+  <p class="prose en">Following Zhang (2003), the series is split into a linear part \(L_t\) and a nonlinear part \(N_t\). ARIMA estimates \(L_t\); a neural network (MLP, LSTM or KAN) learns the residual \(e_t = y_t - \hat L_t\); the two forecasts are added.</p>
+  <div class="eq">\[ \hat y_t = \hat L_t^{\text{ARIMA}} + \hat N_t^{\text{NN}}\big(e_{t-1}, e_{t-2},\dots\big). \]</div>
+  <h3>4.5 <span class="vi">Ensemble có trọng số theo kỳ hạn</span><span class="en">Horizon-weighted ensemble</span></h3>
+  <p class="prose vi">Trọng số gốc cho ARIMA, XGBoost, MLP, LSTM, KAN là 0,1; 0,1; 0,2; 0,25; 0,35. Khi kỳ hạn tăng, trọng số hai mô hình cổ điển nhân với \(1/(h+1)\), ba mạng nơ-ron nhân với \(h/(h+1)\), rồi chuẩn hóa về tổng bằng 1:</p>
+  <p class="prose en">Base weights for ARIMA, XGBoost, MLP, LSTM and KAN are 0.1, 0.1, 0.2, 0.25 and 0.35. As the horizon grows, the two classical models are scaled by \(1/(h+1)\) and the three neural networks by \(h/(h+1)\), then renormalised to sum to 1:</p>
+  <div class="eq">\[ \tilde w_m(h) = w_m\cdot\begin{cases} \frac{1}{h+1} & m\in\{\text{ARIMA},\text{XGB}\}\\[2pt] \frac{h}{h+1} & m\in\{\text{MLP},\text{LSTM},\text{KAN}\}\end{cases}, \qquad w_m(h) = \frac{\tilde w_m(h)}{\sum_{m'}\tilde w_{m'}(h)}. \]</div>
+  <figure>
+    <div class="plate"><svg id="ens-svg" viewBox="0 0 640 260" width="100%" style="max-width:640px" role="img" aria-label="ensemble weights"></svg></div>
+    <figcaption class="vi"><b>Hình 4.</b> Trọng số ensemble tính lại từ công thức. Ở h = 1, các hệ số \(1/(h+1)\) và \(h/(h+1)\) bằng nhau nên trọng số giữ nguyên. Đến h = 20, ARIMA và XGBoost gần như biến mất (0,6% mỗi mô hình) và KAN chiếm 43%.</figcaption>
+    <figcaption class="en"><b>Figure 4.</b> Ensemble weights recomputed from the formula. At h = 1 the factors \(1/(h+1)\) and \(h/(h+1)\) are equal, so the base weights are unchanged. By h = 20 ARIMA and XGBoost all but vanish (0.6% each) and KAN carries 43%.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th><span class="vi">Mô hình</span><span class="en">Model</span></th><th><span class="vi">Cấu hình</span><span class="en">Configuration</span></th></tr></thead>
+    <tbody>
+      <tr><td>XGBoost</td><td>max depth 3 · 20 estimators</td></tr>
+      <tr><td>MLP</td><td>1 dense layer · 128 units · ReLU · Adam, lr 0.001 · 300 epochs</td></tr>
+      <tr><td>LSTM</td><td>LSTM encoder 128 · MLP decoder 128 · Adam, lr 0.001 · 300 epochs</td></tr>
+      <tr><td>KAN</td><td>1 hidden layer · 128 units · Adam, lr 0.001 · 300 epochs</td></tr>
+      <tr><td><span class="vi">Tiền xử lý</span><span class="en">Preprocessing</span></td><td><span class="vi">Min–Max (0, 1) cho mọi mạng nơ-ron</span><span class="en">Min–Max (0, 1) for all neural networks</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="n">5</span><span class="vi">Dữ liệu và thước đo</span><span class="en">Data and metrics</span></h2>
+  <p class="prose vi">Giá đóng cửa điều chỉnh hằng ngày của VN-Index (vốn hóa 415 công ty trên HoSE) và bốn cổ phiếu đại diện cho bốn ngành: Vietcombank (ngân hàng), FPT (công nghệ), Hòa Phát (thép) và SSI (chứng khoán). Giai đoạn 14/07/2014 đến 13/09/2024, tổng cộng 2.543 phiên, lấy từ Fast Connect API của SSI; dữ liệu thiếu được bổ sung từ HoSE. Chia theo thời gian: 90% đầu để huấn luyện, 10% cuối (khoảng 254 phiên, từ cuối 2023 đến tháng 9/2024) để kiểm tra.</p>
+  <p class="prose en">Daily adjusted closing prices of the VN-Index (the capitalisation of 415 HoSE companies) and four stocks from four sectors: Vietcombank (banking), FPT (technology), Hoa Phat (steel) and SSI (brokerage). The window runs from 14 July 2014 to 13 September 2024, 2,543 sessions, sourced from SSI's Fast Connect API; gaps were filled from HoSE records. The split is chronological: the first 90% for training, the last 10% (about 254 sessions, late 2023 to September 2024) for testing.</p>
+  <div class="eq">\[ \mathrm{RMSE} = \sqrt{\frac1n\sum_{i=1}^{n}(y_i-\hat y_i)^2}, \qquad R^2 = 1 - \frac{\sum_i (y_i-\hat y_i)^2}{\sum_i (y_i-\bar y)^2}. \]</div>
+  <p class="prose note vi">RMSE có đơn vị của giá (điểm chỉ số với VNI, đồng với cổ phiếu), nên chỉ so sánh được trong cùng một chuỗi. R² âm nghĩa là mô hình kém hơn việc dự báo bằng trung bình của kỳ test.</p>
+  <p class="prose note en">RMSE is in price units (index points for VNI, dong for stocks), so it is only comparable within one series. A negative R² means the model does worse than predicting the test-period mean.</p>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="n">6</span><span class="vi">Kết quả</span><span class="en">Results</span></h2>
+  <figure>
+    <div class="plate">
+      <div class="stack" style="gap:10px">
+        <div class="ctl">
+          <div class="seg" id="rx-ds" role="group" aria-label="dataset"></div>
+          <div class="seg" id="rx-met" role="group" aria-label="metric">
+            <button type="button" data-m="rmse" aria-pressed="true">RMSE</button>
+            <button type="button" data-m="r2" aria-pressed="false">R²</button>
+          </div>
+        </div>
+        <div class="chips" id="rx-chips"></div>
+        <div class="readout"><span><span class="vi">○ lớn = mô hình tốt nhất ở kỳ hạn đó</span><span class="en">large ○ = best model at that horizon</span></span></div>
+        <svg id="rx-svg" viewBox="0 0 680 340" width="100%" style="max-width:680px" role="img" aria-label="results by horizon"></svg>
+      </div>
+    </div>
+    <figcaption class="vi"><b>Hình 5 (tương tác).</b> RMSE (thang log) hoặc R² theo kỳ hạn cho từng chuỗi. Bấm vào tên mô hình để ẩn/hiện; rê chuột vào điểm để xem giá trị. Các mô hình lai vẽ nét đứt. Số liệu từ Bảng III của bài.</figcaption>
+    <figcaption class="en"><b>Figure 5 (interactive).</b> RMSE (log scale) or R² by horizon for each series. Click a model name to hide or show it; hover a point for its value. Hybrids are dashed. Data from Table III of the paper.</figcaption>
+  </figure>
+
+  <h3><span class="vi">Thứ hạng trung bình trên năm chuỗi</span><span class="en">Average rank across the five series</span></h3>
+  <div class="tw"><table class="heat" id="heat"></table></div>
+  <p class="note vi">Bảng 1. Hạng RMSE trung bình (1 = tốt nhất trong 9) trên VNI, VCB, HPG, FPT, SSI. Màu đậm hơn là tốt hơn.</p>
+  <p class="note en">Table 1. Average RMSE rank (1 = best of 9) across VNI, VCB, HPG, FPT and SSI. Darker is better.</p>
+
+  <div class="cards">
+    <div class="card"><h3><span class="vi">ARIMA thắng ở h = 1</span><span class="en">ARIMA wins at h = 1</span></h3><p class="vi">Hạng trung bình 1,2. Đứng đầu ở 4/5 chuỗi; ở FPT, MLP nhỉnh hơn 0,3%. Nhưng lợi thế rất mỏng (VNI: 12,65 so với KAN 12,74) và biến mất từ h = 3.</p><p class="en">Average rank 1.2. Best on 4 of 5 series; on FPT, MLP is 0.3% better. The margin is thin, though (VNI: 12.65 vs KAN 12.74), and it disappears from h = 3.</p></div>
+    <div class="card"><h3><span class="vi">Ensemble thắng ở kỳ hạn dài</span><span class="en">Ensemble wins at long horizons</span></h3><p class="vi">Hạng trung bình 1,4 ở h = 5 và 1,2 ở h = 20. Ở VNI h = 20, RMSE 15,05 so với 51,48 của ARIMA.</p><p class="en">Average rank 1.4 at h = 5 and 1.2 at h = 20. On VNI at h = 20, RMSE 15.05 against ARIMA's 51.48.</p></div>
+    <div class="card"><h3><span class="vi">Mô hình lai thất bại</span><span class="en">Hybrids fail</span></h3><p class="vi">Hạng 7–8 ở mọi kỳ hạn dài, R² âm ở VCB, HPG, SSI tại h = 20. Phần dư của ARIMA trên thị trường này quá nhiễu để mạng nơ-ron học thêm được gì.</p><p class="en">Rank 7–8 at every long horizon, with negative R² on VCB, HPG and SSI at h = 20. ARIMA's residuals in this market are too noisy for a neural network to add anything.</p></div>
+    <div class="card"><h3><span class="vi">XGBoost sụp ở FPT</span><span class="en">XGBoost collapses on FPT</span></h3><p class="vi">R² ≈ −0,77 ở cả bốn kỳ hạn, RMSE gần như không đổi (~27.500). Cây quyết định không ngoại suy được ra ngoài khoảng giá đã thấy khi huấn luyện (xem R2).</p><p class="en">R² ≈ −0.77 at all four horizons, with almost constant RMSE (~27,500). Trees cannot extrapolate beyond the price range seen in training (see R2).</p></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="n">7</span><span class="vi">KAN so với MLP và LSTM</span><span class="en">KAN versus MLP and LSTM</span></h2>
+  <figure>
+    <div class="plate"><svg id="sc-svg" viewBox="0 0 640 340" width="100%" style="max-width:640px" role="img" aria-label="KAN vs MLP"></svg></div>
+    <figcaption class="vi"><b>Hình 6.</b> RMSE của KAN (trục tung) so với MLP và LSTM (trục hoành) trên 20 ô (5 chuỗi × 4 kỳ hạn), chuẩn hóa theo RMSE của MLP. Vùng xám là ±5%. So với MLP, mọi điểm nằm sát đường chéo: tỷ số trung vị 1,010, KAN tốt hơn ở 8/20 ô. So với LSTM, KAN thấp hơn ở 16/20 ô với RMSE trung vị thấp hơn 25%.</figcaption>
+    <figcaption class="en"><b>Figure 6.</b> KAN RMSE (vertical) against MLP and LSTM (horizontal) over 20 cells (5 series × 4 horizons), normalised by MLP RMSE. The grey band is ±5%. Against MLP, every point sits on the diagonal: median ratio 1.010, KAN better in 8 of 20 cells. Against LSTM, KAN is lower in 16 of 20 cells, with a median RMSE 25% lower.</figcaption>
+  </figure>
+  <div class="def amber"><span class="t"><span class="vi">Đọc kết quả này thế nào</span><span class="en">How to read this</span></span>
+    <ul class="prose">
+      <li class="vi"><b>KAN và MLP gần như không phân biệt được</b> trong thiết lập này. Chênh lệch ±1% nhỏ hơn biến động thường gặp giữa các lần khởi tạo ngẫu nhiên khác nhau của cùng một mạng.</li>
+      <li class="en"><b>KAN and MLP are practically indistinguishable</b> in this setup. A ±1% gap is smaller than the usual spread between random initialisations of the same network.</li>
+      <li class="vi"><b>Cả hai đều vượt LSTM rõ ràng.</b> Với đầu vào là vài giá trị trễ, cấu trúc hồi quy của LSTM không có thêm thông tin để khai thác, trong khi số tham số lớn hơn làm tăng phương sai.</li>
+      <li class="en"><b>Both clearly beat LSTM.</b> With only a few lagged values as input, LSTM's recurrence has no extra information to exploit, while its larger parameter count adds variance.</li>
+      <li class="vi"><b>KAN vẫn có giá trị dù không thắng MLP:</b> cùng độ chính xác nhưng mỗi hàm cạnh đọc được. Trong một ensemble mà KAN nhận 35–43% trọng số, khả năng kiểm tra hình dạng hàm là một lợi thế quản trị mô hình.</li>
+      <li class="en"><b>KAN still earns its place without beating MLP:</b> equal accuracy, but every edge function is readable. In an ensemble where KAN carries 35–43% of the weight, being able to inspect its shapes is a model-governance advantage.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2><span class="n">8</span><span class="vi">Đánh giá kỹ thuật và độ vững</span><span class="en">Technical review and robustness</span></h2>
+  <p class="prose vi">Mục này ghi lại các điểm nên kiểm tra thêm khi mở rộng nghiên cứu, mỗi điểm kèm cách khắc phục cụ thể.</p>
+  <p class="prose en">This section records points worth checking when extending the study, each with a concrete fix.</p>
+  <div class="review">
+    <div class="ri"><span class="k">R1</span><div>
+      <h3><span class="vi">Dự báo mức giá làm R² cao một cách tự nhiên</span><span class="en">Forecasting price levels inflates R²</span><span class="sev h"><span class="vi">cao</span><span class="en">high</span></span></h3>
+      <p class="prose vi">Giá cổ phiếu gần như một bước ngẫu nhiên, nên chỉ cần dự báo "giá ngày mai = giá hôm nay" đã cho R² rất cao trên mức giá. R² 0,96 ở VNI h = 1 vì vậy chưa nói lên nhiều. Thiếu mốc so sánh <i>naive</i> (random walk) khiến khó biết mô hình nào thực sự thêm thông tin. ARIMA(1,1,1) thắng ở h = 1 cũng phù hợp với việc nó gần random walk nhất. Cách sửa: thêm baseline \(\hat y_{t+h}=y_t\); báo cáo Theil's U hoặc MASE; dự báo lợi suất log thay vì mức giá; kiểm định Diebold–Mariano cho từng cặp mô hình.</p>
+      <p class="prose en">Stock prices are close to a random walk, so simply predicting "tomorrow = today" already gives a very high R² on price levels. An R² of 0.96 on VNI at h = 1 therefore says little. Without a <i>naive</i> (random-walk) baseline it is hard to tell which models add real information. ARIMA(1,1,1) winning at h = 1 is also consistent with it being the closest to a random walk. Fix: add the baseline \(\hat y_{t+h}=y_t\); report Theil's U or MASE; forecast log returns instead of levels; run Diebold–Mariano tests for each model pair.</p>
+    </div></div>
+    <div class="ri"><span class="k">R2</span><div>
+      <h3><span class="vi">Cây và spline không ngoại suy được</span><span class="en">Trees and splines do not extrapolate</span><span class="sev h"><span class="vi">cao</span><span class="en">high</span></span></h3>
+      <p class="prose vi">FPT tăng mạnh trong 2024 và giá kỳ test vượt xa đỉnh kỳ huấn luyện. Một cây hồi quy chỉ trả về giá trị trung bình của các lá đã thấy, nên dự báo của XGBoost bị chặn trên tại vùng giá cũ. Điều này giải thích RMSE gần như hằng số ~27.500 và R² ≈ −0,77 ở mọi kỳ hạn. Vấn đề tương tự, nhẹ hơn, xảy ra với KAN: Min–Max fit trên tập huấn luyện đẩy đầu vào kỳ test ra ngoài [0, 1], nơi phần spline có thể bằng 0 và chỉ còn SiLU hoạt động. Ensemble ở FPT h = 1 (RMSE 3.904, gấp đôi MLP) cũng bị kéo xuống vì XGBoost vẫn giữ 10% trọng số. Cách sửa: dự báo sai phân hoặc lợi suất; chuẩn hóa theo cửa sổ trượt; với KAN, mở rộng lưới hoặc cập nhật lưới theo dữ liệu.</p>
+      <p class="prose en">FPT rallied strongly in 2024 and test-period prices sat well above the training maximum. A regression tree can only return averages of leaves it has seen, so XGBoost's forecast is capped at the old price range. That explains the near-constant RMSE of ~27,500 and R² ≈ −0.77 at every horizon. A milder version of the same issue affects KAN: Min–Max scaling fitted on the training set pushes test inputs outside [0, 1], where the spline part can be zero and only SiLU remains. The ensemble on FPT at h = 1 (RMSE 3,904, twice MLP's) is also dragged down because XGBoost still holds 10% of the weight. Fix: forecast differences or returns; normalise on a rolling window; for KAN, widen the grid or update it from the data.</p>
+    </div></div>
+    <div class="ri"><span class="k">R3</span><div>
+      <h3><span class="vi">Cấu hình KAN nên được mô tả đầy đủ hơn</span><span class="en">The KAN configuration should be specified more fully</span><span class="sev m"><span class="vi">trung bình</span><span class="en">medium</span></span></h3>
+      <p class="prose vi">Bảng siêu tham số ghi KAN có "1 lớp ẩn, 128 đơn vị, kích hoạt ReLU", giống hệt MLP. KAN chuẩn không dùng ReLU mà dùng SiLU + B-spline, và thường hẹp hơn nhiều. Các tham số quyết định là kích thước lưới G, bậc spline k, điều chuẩn và việc có mở rộng lưới hay không, nhưng chưa được báo cáo. Kết quả KAN gần như trùng MLP (±1%) có thể là vì cấu hình rất gần một MLP. Cách sửa: báo cáo G, k, số tham số thực, thư viện dùng (pykan, efficient-kan…); thử KAN hẹp, ví dụ [lags, 5, 1], với nhiều G.</p>
+      <p class="prose en">The hyperparameter table lists KAN as "1 hidden layer, 128 units, ReLU activation", identical to the MLP. A standard KAN uses SiLU + B-splines rather than ReLU and is usually much narrower. The decisive settings are the grid size G, spline order k, regularisation and whether grid extension is used, and these are not reported. KAN matching MLP within ±1% may be because the configuration is very close to an MLP. Fix: report G, k, actual parameter count and the library used (pykan, efficient-kan…); try a narrow KAN such as [lags, 5, 1] across several G.</p>
+    </div></div>
+    <div class="ri"><span class="k">R4</span><div>
+      <h3><span class="vi">Trọng số ensemble chọn từ "thử nghiệm sơ bộ"</span><span class="en">Ensemble weights chosen from "preliminary experiments"</span><span class="sev m"><span class="vi">trung bình</span><span class="en">medium</span></span></h3>
+      <p class="prose vi">Nếu thử nghiệm sơ bộ có nhìn vào tập test, ensemble được lợi thế không công bằng. Cách sửa: tách một tập validation trước tập test; ước lượng trọng số trên đó (stacking, hoặc trọng số tỷ lệ nghịch với MSE validation); giữ tập test không bị chạm cho đến bước cuối.</p>
+      <p class="prose en">If the preliminary experiments looked at the test set, the ensemble gets an unfair edge. Fix: carve out a validation set before the test set; estimate weights there (stacking, or inverse validation-MSE weights); keep the test set untouched until the final step.</p>
+    </div></div>
+    <div class="ri"><span class="k">R5</span><div>
+      <h3><span class="vi">Một lần chia, một giai đoạn test</span><span class="en">One split, one test period</span><span class="sev m"><span class="vi">trung bình</span><span class="en">medium</span></span></h3>
+      <p class="prose vi">Toàn bộ kết luận dựa trên khoảng 254 phiên cuối 2023 đến 2024, một giai đoạn có xu hướng riêng. Mạng nơ-ron cũng chỉ chạy một lần khởi tạo. Cách sửa: đánh giá walk-forward (rolling origin) qua nhiều năm, gồm cả giai đoạn giảm như 2022; chạy 5–10 seed và báo cáo trung bình kèm độ lệch chuẩn.</p>
+      <p class="prose en">All conclusions rest on roughly 254 sessions from late 2023 to 2024, a period with its own trend. The neural networks are also run with a single initialisation. Fix: walk-forward (rolling-origin) evaluation over several years, including down markets such as 2022; run 5–10 seeds and report mean and standard deviation.</p>
+    </div></div>
+    <div class="ri"><span class="k">R6</span><div>
+      <h3><span class="vi">Một giá trị R² có thể bị chép nhầm</span><span class="en">One R² value is likely a transcription slip</span><span class="sev l"><span class="vi">thấp</span><span class="en">low</span></span></h3>
+      <p class="prose vi">Trên cùng một tập test, \(R^2 = 1 - \mathrm{RMSE}^2/\mathrm{Var}(y)\), nên từ mỗi cặp (RMSE, R²) có thể suy ra phương sai của tập test và các mô hình phải cho cùng một phương sai. Kiểm tra cả 180 ô, chỉ một ô lệch: Ensemble ở HPG h = 20 ghi R² = 0,9831, nhưng RMSE 592,91 của nó ứng với R² ≈ 0,912. Giá trị 0,9831 trùng với ô Ensemble FPT h = 20 ngay dưới, nên nhiều khả năng là chép nhầm. Kết luận "Ensemble tốt nhất ở HPG h = 20" vẫn đúng vì RMSE của nó vẫn thấp nhất.</p>
+      <p class="prose en">On a single test set \(R^2 = 1 - \mathrm{RMSE}^2/\mathrm{Var}(y)\), so each (RMSE, R²) pair implies the test-set variance, and all models must agree on it. Checking all 180 cells, only one disagrees: the Ensemble at HPG h = 20 reports R² = 0.9831, but its RMSE of 592.91 implies R² ≈ 0.912. The value 0.9831 matches the FPT h = 20 Ensemble cell just below, so it is most likely a copy slip. The conclusion "Ensemble is best on HPG at h = 20" still holds, because its RMSE is still the lowest.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2><span class="n">9</span><span class="vi">Ý nghĩa và ứng dụng</span><span class="en">Implications and applications</span></h2>
+  <div class="cards">
+    <div class="card"><h3><span class="vi">Chọn mô hình theo kỳ hạn</span><span class="en">Choose the model by horizon</span></h3><p class="vi">Không có mô hình nào thắng ở mọi kỳ hạn. Với lệnh trong ngày hoặc phiên kế tiếp, mô hình tuyến tính đơn giản là đủ; với quyết định theo tuần hoặc tháng, cần kết hợp nhiều mô hình.</p><p class="en">No single model wins at every horizon. For next-session decisions a simple linear model is enough; for weekly or monthly decisions, combining models pays off.</p></div>
+    <div class="card"><h3><span class="vi">Đừng mặc định mô hình lai</span><span class="en">Don't assume hybrids help</span></h3><p class="vi">Kết quả ARIMA + NN tốt trên S&amp;P 500 không chuyển sang được Việt Nam. Trên thị trường mới nổi, hãy kiểm chứng lại các "best practice" từ thị trường phát triển.</p><p class="en">ARIMA + NN results that work on the S&amp;P 500 did not carry over to Vietnam. In emerging markets, re-test "best practices" from developed markets.</p></div>
+    <div class="card"><h3><span class="vi">KAN là ứng viên đáng theo dõi</span><span class="en">KAN is worth tracking</span></h3><p class="vi">Độ chính xác ngang MLP với khả năng diễn giải cao hơn. Phù hợp khi mô hình cần được giải thích cho hội đồng rủi ro hoặc cơ quan quản lý.</p><p class="en">MLP-level accuracy with better interpretability. A good fit when a model must be explained to a risk committee or a regulator.</p></div>
+  </div>
+  <ul class="prose">
+    <li class="vi"><b>Nhà đầu tư và tự doanh:</b> dự báo h = 3 khớp với vòng T+2,5; ensemble cho tín hiệu ổn định hơn khi nắm giữ theo tuần.</li>
+    <li class="en"><b>Investors and prop desks:</b> h = 3 forecasts match the T+2.5 cycle; the ensemble gives steadier signals for weekly holding periods.</li>
+    <li class="vi"><b>Quỹ đầu tư:</b> h = 20 dùng cho đánh giá danh mục định kỳ, nơi ensemble có hạng trung bình 1,2.</li>
+    <li class="en"><b>Funds:</b> h = 20 serves periodic portfolio review, where the ensemble's average rank is 1.2.</li>
+    <li class="vi"><b>Quản lý và giám sát:</b> mô hình diễn giải được như KAN hỗ trợ kiểm tra xem một tín hiệu dựa trên quan hệ hợp lý hay chỉ là nhiễu.</li>
+    <li class="en"><b>Regulators and supervisors:</b> interpretable models such as KAN help check whether a signal rests on a sensible relationship or on noise.</li>
+  </ul>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2><span class="n">10</span><span class="vi">Gợi ý mở rộng</span><span class="en">Suggested extensions</span></h2>
+  <div class="tw"><table>
+    <thead><tr><th><span class="vi">Hướng</span><span class="en">Direction</span></th><th><span class="vi">Làm gì</span><span class="en">What to do</span></th><th><span class="vi">Vì sao</span><span class="en">Why</span></th></tr></thead>
+    <tbody>
+      <tr><td><span class="vi">Mục tiêu dừng</span><span class="en">Stationary target</span></td><td><span class="vi">Dự báo lợi suất log; thêm baseline random walk</span><span class="en">Forecast log returns; add a random-walk baseline</span></td><td><span class="vi">Giải quyết R1 và R2 cùng lúc</span><span class="en">Fixes R1 and R2 together</span></td></tr>
+      <tr><td><span class="vi">KAN đúng nghĩa</span><span class="en">A proper KAN</span></td><td><span class="vi">KAN hẹp, quét G và k, mở rộng lưới, tỉa và ký hiệu hóa</span><span class="en">Narrow KAN, sweep G and k, grid extension, pruning and symbolic fits</span></td><td><span class="vi">Kiểm tra lợi thế thật của KAN (R3)</span><span class="en">Tests KAN's real advantage (R3)</span></td></tr>
+      <tr><td><span class="vi">Biến thể KAN</span><span class="en">KAN variants</span></td><td>FastKAN (RBF), Chebyshev KAN, Wav-KAN, TKAN</td><td><span class="vi">Nhanh hơn; TKAN thêm cấu trúc thời gian</span><span class="en">Faster; TKAN adds temporal structure</span></td></tr>
+      <tr><td><span class="vi">Thêm đặc trưng</span><span class="en">More features</span></td><td><span class="vi">Khối lượng, khối ngoại, lãi suất, tỷ giá, VN30F1M</span><span class="en">Volume, foreign flows, rates, FX, VN30F1M</span></td><td><span class="vi">Nơi KAN đọc được hình dạng phát huy giá trị</span><span class="en">Where KAN's readable shapes become useful</span></td></tr>
+      <tr><td><span class="vi">Đánh giá chặt</span><span class="en">Rigorous evaluation</span></td><td><span class="vi">Walk-forward, nhiều seed, Diebold–Mariano, Model Confidence Set</span><span class="en">Walk-forward, multiple seeds, Diebold–Mariano, Model Confidence Set</span></td><td><span class="vi">Tách tín hiệu khỏi may mắn (R4, R5)</span><span class="en">Separates signal from luck (R4, R5)</span></td></tr>
+      <tr><td><span class="vi">Ensemble học được</span><span class="en">Learned ensemble</span></td><td><span class="vi">Stacking trên validation; trọng số thay đổi theo chế độ thị trường</span><span class="en">Stacking on validation; regime-dependent weights</span></td><td><span class="vi">Thay trọng số chọn tay</span><span class="en">Replaces hand-set weights</span></td></tr>
+      <tr><td><span class="vi">Khoảng dự báo</span><span class="en">Forecast intervals</span></td><td><span class="vi">Conformal prediction hoặc quantile loss</span><span class="en">Conformal prediction or quantile loss</span></td><td><span class="vi">Quyết định giao dịch cần độ bất định, không chỉ điểm</span><span class="en">Trading decisions need uncertainty, not just points</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2><span class="n">11</span><span class="vi">Tài liệu tham khảo</span><span class="en">References</span></h2>
+  <ul class="prose note">
+    <li>Kolmogorov, A. N. (1957). On the representation of continuous functions of many variables by superposition of continuous functions of one variable and addition. <i>Doklady Akademii Nauk</i>, 114(5), 953–956.</li>
+    <li>Girosi, F. &amp; Poggio, T. (1989). Representation properties of networks: Kolmogorov's theorem is irrelevant. <i>Neural Computation</i>, 1(4), 465–469.</li>
+    <li>Liu, Z. et al. (2024). KAN: Kolmogorov–Arnold Networks. arXiv:2404.19756.</li>
+    <li>Ji, T., Hou, Y. &amp; Zhang, D. (2025). A comprehensive survey on Kolmogorov–Arnold Networks. arXiv:2407.11075.</li>
+    <li>Somvanshi, S. et al. (2024). A survey on Kolmogorov–Arnold Network. arXiv:2411.06078.</li>
+    <li>de Boor, C. (1978). <i>A Practical Guide to Splines</i>. Springer.</li>
+    <li>Zhang, G. P. (2003). Time series forecasting using a hybrid ARIMA and neural network model. <i>Neurocomputing</i>, 50, 159–175.</li>
+    <li>Chen, T. &amp; Guestrin, C. (2016). XGBoost: A scalable tree boosting system. <i>KDD</i>.</li>
+    <li>Hochreiter, S. &amp; Schmidhuber, J. (1997). Long short-term memory. <i>Neural Computation</i>, 9(8), 1735–1780.</li>
+    <li>Diebold, F. X. &amp; Mariano, R. S. (1995). Comparing predictive accuracy. <i>Journal of Business &amp; Economic Statistics</i>, 13(3), 253–263.</li>
+    <li>Hyndman, R. J. &amp; Koehler, A. B. (2006). Another look at measures of forecast accuracy. <i>International Journal of Forecasting</i>, 22(4), 679–688.</li>
+    <li>Pham, M.-C., Nguyen-Le, D.-K. &amp; Ngo, T.-M. (2025). From traditional statistical model to modern deep learning: A multi-horizon study of stock market prediction in Vietnam. <i>VSEFI 2025</i>.</li>
+  </ul>
+</section>
+</main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+const root=document.documentElement;
+const css=()=>getComputedStyle(root);
+const tok=n=>css().getPropertyValue(n).trim();
+const L=()=>root.getAttribute("data-lang");
+const T=(vi,en)=>L()==="vi"?vi:en;
+const fmt=(v,d)=>{const s=v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});return L()==="vi"?s.replace(/,/g,"§").replace(/\./g,",").replace(/§/g,"."):s;};
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+const tip=document.getElementById("tip");
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-30)+"px";}
+function hideTip(){tip.style.opacity=0;}
+
+/* ---------- data (Table III) ---------- */
+const MODELS=["ARIMA","XGBoost","MLP","LSTM","KAN","ARIMA+MLP","ARIMA+LSTM","ARIMA+KAN","Ensemble"];
+const COLORVAR={"ARIMA":"--m-arima","XGBoost":"--m-xgb","MLP":"--m-mlp","LSTM":"--m-lstm","KAN":"--m-kan","ARIMA+MLP":"--m-mlp","ARIMA+LSTM":"--m-lstm","ARIMA+KAN":"--m-kan","Ensemble":"--m-ens"};
+const HYB=m=>m.indexOf("+")>0;
+const H=[1,3,5,20];
+const R={
+VNI:[[12.65,.9665,21.73,.9010,27.70,.8391,51.48,.4445],[14.81,.9540,15.63,.9488,15.90,.9470,15.52,.9495],[12.87,.9653,13.03,.9644,13.42,.9622,17.73,.9341],[17.85,.9332,16.95,.9398,19.28,.9221,18.23,.9304],[12.74,.9660,12.87,.9653,13.19,.9635,18.69,.9268],[13.24,.9632,25.36,.8652,35.07,.7421,68.11,.0277],[13.43,.9622,22.95,.8896,27.84,.8376,56.10,.3404],[13.32,.9628,25.24,.8664,35.06,.7423,68.32,.0217],[12.81,.9656,12.71,.9661,12.62,.9666,15.05,.9525]],
+VCB:[[993.84,.9180,1732.55,.7509,2062.09,.6471,3638.23,-.0985],[2047.75,.6520,2634.73,.4239,2710.52,.3903,2701.05,.3945],[1006.13,.9160,1023.18,.9131,1059.98,.9068,1815.78,.7264],[1285.76,.8628,1285.75,.8628,1448.17,.8259,1422.55,.8321],[1004.95,.9162,1037.12,.9107,1074.15,.9042,1805.45,.7295],[1038.52,.9105,1960.84,.6809,2505.78,.4789,4894.12,-.9878],[1937.37,.6885,2691.40,.3988,2949.40,.2781,4545.84,-.7150],[1026.16,.9126,1940.81,.6874,2510.84,.4768,4909.37,-1.0003],[1027.15,.9124,1145.66,.8911,1151.93,.8899,1245.46,.8713]],
+HPG:[[404.35,.9589,671.18,.8868,853.64,.8169,1680.36,.2906],[633.39,.8992,637.74,.8978,637.87,.8978,637.01,.8981],[420.15,.9557,418.44,.9560,437.59,.9519,749.03,.8590],[500.09,.9372,490.29,.9396,580.87,.9152,643.52,.8960],[411.84,.9574,413.39,.9571,442.95,.9507,762.88,.8538],[434.89,.9525,776.09,.8487,1056.13,.7198,2484.51,-.5508],[421.93,.9553,680.00,.8838,927.20,.7840,1923.39,.0706],[431.36,.9533,769.55,.8512,1060.69,.7173,2480.79,-.5461],[408.79,.9580,406.79,.9584,415.80,.9566,592.91,.9831]],
+FPT:[[1702.10,.9932,3206.03,.9760,4203.81,.9588,8798.50,.8193],[27527.27,-.7685,27532.20,-.7692,27530.84,-.7690,27540.80,-.7703],[1697.03,.9933,1769.63,.9927,1946.61,.9912,4117.11,.9604],[4496.73,.9528,2404.39,.9865,3511.14,.9712,4165.62,.9595],[1702.74,.9932,1796.31,.9925,1944.41,.9912,4199.64,.9588],[1776.84,.9926,3762.62,.9670,5179.59,.9374,12919.24,.6105],[2065.86,.9900,3777.31,.9667,5099.21,.9393,11648.72,.6833],[1783.57,.9926,3710.19,.9679,5132.05,.9385,12860.68,.6140],[3904.29,.9644,3687.13,.9683,1939.99,.9912,2692.14,.9831]],
+SSI:[[724.80,.9012,1181.44,.7375,1429.04,.6159,2521.03,-.1954],[875.05,.8560,890.78,.8508,891.15,.8506,924.47,.8393],[742.22,.8964,780.41,.8855,783.62,.8845,980.97,.8190],[1434.56,.6129,1095.99,.7741,1202.59,.7280,1822.55,.3753],[747.87,.8948,789.58,.8827,797.38,.8804,1043.63,.7951],[785.74,.8839,1381.15,.6412,1877.81,.3368,3613.51,-1.4559],[760.61,.8912,1721.16,.4428,1645.09,.4910,3317.50,-1.0700],[778.45,.8860,1382.63,.6405,1878.95,.3360,3603.00,-1.4416],[750.47,.8941,748.66,.8946,767.87,.8891,961.24,.8262]]};
+const DS=Object.keys(R);
+const val=(ds,m,j,met)=>R[ds][MODELS.indexOf(m)][2*j+(met==="r2"?1:0)];
+
+/* ---------- B-spline widget ---------- */
+let bsTarget="smooth";
+function rng(seed){let s=seed;return()=>{s=(s*16807)%2147483647;return s/2147483647;};}
+const r0=rng(11); const NOISE=[]; for(let i=0;i<70;i++){let u=0;for(let k=0;k<6;k++)u+=r0();NOISE.push((u-3)*0.16);}
+const TARGETS={
+  smooth:x=>0.55*Math.sin(Math.PI*x)+0.3*x,
+  kink:x=>Math.max(x-0.1,0)*1.2-0.25,
+  regime:x=>0.7*Math.tanh(9*(x-0.15)),
+  noisy:x=>0.55*Math.sin(Math.PI*x)+0.3*x
+};
+function basis(x,G,k){const a=-1,b=1,h=(b-a)/G;const t=[];for(let i=0;i<=G+2*k;i++)t.push(a+(i-k)*h);
+  const xx=Math.min(x,b-1e-9);let B=[];for(let i=0;i<t.length-1;i++)B.push(xx>=t[i]&&xx<t[i+1]?1:0);
+  for(let d=1;d<=k;d++){const nb=[];for(let i=0;i<t.length-1-d;i++){const l=(t[i+d]-t[i])?(xx-t[i])/(t[i+d]-t[i])*B[i]:0;const r=(t[i+d+1]-t[i+1])?(t[i+d+1]-xx)/(t[i+d+1]-t[i+1])*B[i+1]:0;nb.push(l+r);}B=nb;}
+  return B;}
+function solve(A,y){const n=A.length;const M=A.map((r,i)=>r.concat([y[i]]));for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;[M[c],M[p]]=[M[p],M[c]];const d=M[c][c]||1e-12;for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/d;for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k];}}return M.map((r,i)=>r[n]/(r[i]||1e-12));}
+function drawBS(){
+  const svg=document.getElementById("bs-svg");svg.innerHTML="";
+  const G=+document.getElementById("bs-g").value;document.getElementById("bs-gv").textContent=G;
+  const k=3,nb=G+k;document.getElementById("bs-np").textContent=nb;
+  const f=TARGETS[bsTarget];
+  let xs=[],ys=[];
+  if(bsTarget==="noisy"){for(let i=0;i<NOISE.length;i++){const x=-1+2*(i+0.5)/NOISE.length;xs.push(x);ys.push(f(x)+NOISE[i]);}}
+  else{for(let i=0;i<200;i++){const x=-1+2*i/199;xs.push(x);ys.push(f(x));}}
+  const Bm=xs.map(x=>basis(x,G,k));
+  const A=[...Array(nb)].map(()=>Array(nb).fill(0)),bv=Array(nb).fill(0);
+  Bm.forEach((row,i)=>{for(let p=0;p<nb;p++){bv[p]+=row[p]*ys[i];for(let q=0;q<nb;q++)A[p][q]+=row[p]*row[q];}});
+  for(let p=0;p<nb;p++)A[p][p]+=1e-6;
+  const c=solve(A,bv);
+  const W=680,Ht=330,ml=46,mr=14,mt=14,plotB=232,bandT=252,bandB=316;
+  const sx=x=>ml+(x+1)/2*(W-ml-mr), sy=y=>mt+(1.05-y)/2.1*(plotB-mt);
+  const g=el("g",{},svg);
+  [-1,-0.5,0,0.5,1].forEach(v=>{el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v),stroke:tok("--rule"),"stroke-dasharray":"2 4"},g);el("text",{x:ml-8,y:sy(v)+4,"text-anchor":"end","font-size":11,fill:tok("--muted")},g,fmt(v,1));});
+  // grid knots
+  for(let i=0;i<=G;i++){const x=-1+2*i/G;el("line",{x1:sx(x),x2:sx(x),y1:mt,y2:bandB,stroke:tok("--rule"),"stroke-width":1});}
+  // basis band
+  el("text",{x:ml,y:bandT-6,"font-size":11,fill:tok("--muted")},g,T("Các hàm cơ sở B-spline B_i,3(x)","B-spline basis functions B_i,3(x)"));
+  for(let p=0;p<nb;p++){let d="";for(let i=0;i<=160;i++){const x=-1+2*i/160;const v=basis(x,G,k)[p];d+=(i?"L":"M")+sx(x).toFixed(1)+","+(bandB-v*(bandB-bandT)*0.95).toFixed(1);}el("path",{d,fill:"none",stroke:tok("--c1"),"stroke-width":1,opacity:0.45},g);}
+  // target / data
+  if(bsTarget==="noisy"){xs.forEach((x,i)=>el("circle",{cx:sx(x),cy:sy(ys[i]),r:2.6,fill:tok("--muted"),opacity:.7},g));}
+  let dt="";for(let i=0;i<=200;i++){const x=-1+2*i/200;dt+=(i?"L":"M")+sx(x).toFixed(1)+","+sy(f(x)).toFixed(1);}
+  el("path",{d:dt,fill:"none",stroke:tok("--fg"),"stroke-width":1.6,"stroke-dasharray":"5 4"},g);
+  // fit
+  let df="",se=0;for(let i=0;i<=200;i++){const x=-1+2*i/200;const B=basis(x,G,k);let v=0;for(let p=0;p<nb;p++)v+=c[p]*B[p];se+=(v-f(x))**2;df+=(i?"L":"M")+sx(x).toFixed(1)+","+sy(Math.max(-1.2,Math.min(1.2,v))).toFixed(1);}
+  el("path",{d:df,fill:"none",stroke:tok("--c3"),"stroke-width":2.4},g);
+  document.getElementById("bs-err").textContent=fmt(Math.sqrt(se/201),4);
+  // legend
+  const lg=el("g",{},svg);
+  el("line",{x1:ml+10,x2:ml+30,y1:mt+10,y2:mt+10,stroke:tok("--fg"),"stroke-dasharray":"5 4","stroke-width":1.6},lg);
+  el("text",{x:ml+36,y:mt+14,"font-size":12,fill:tok("--fg")},lg,T("hàm thật","true function"));
+  el("line",{x1:ml+130,x2:ml+150,y1:mt+10,y2:mt+10,stroke:tok("--c3"),"stroke-width":2.4},lg);
+  el("text",{x:ml+156,y:mt+14,"font-size":12,fill:tok("--fg")},lg,T("φ(x) khớp bằng spline","spline fit φ(x)"));
+}
+document.querySelectorAll("#bs-target button").forEach(b=>b.addEventListener("click",()=>{bsTarget=b.dataset.t;document.querySelectorAll("#bs-target button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));drawBS();}));
+document.getElementById("bs-g").addEventListener("input",drawBS);
+
+/* ---------- ensemble weights ---------- */
+function drawEns(){
+  const svg=document.getElementById("ens-svg");svg.innerHTML="";
+  const base={ARIMA:.1,XGBoost:.1,MLP:.2,LSTM:.25,KAN:.35},order=["ARIMA","XGBoost","MLP","LSTM","KAN"];
+  const W=640,ml=46,mr=150,mt=14,mb=36,Hh=260,bw=72;
+  const sy=v=>mt+(1-v)*(Hh-mt-mb);
+  [0,.25,.5,.75,1].forEach(v=>{el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v),stroke:tok("--rule"),"stroke-dasharray":"2 4"},svg);el("text",{x:ml-8,y:sy(v)+4,"text-anchor":"end","font-size":11,fill:tok("--muted")},svg,Math.round(v*100)+"%");});
+  const step=(W-ml-mr)/4;
+  H.forEach((h,j)=>{const w={};let z=0;order.forEach(m=>{w[m]=base[m]*((m==="ARIMA"||m==="XGBoost")?1/(h+1):h/(h+1));z+=w[m];});
+    let acc=0;const x=ml+step*j+(step-bw)/2;
+    order.forEach(m=>{const v=w[m]/z;const r=el("rect",{x,y:sy(acc+v),width:bw,height:Math.max(0.5,sy(acc)-sy(acc+v)),fill:tok(COLORVAR[m])},svg);
+      r.addEventListener("mousemove",e=>showTip(e,`${m} · h = ${h}: <b>${fmt(v*100,1)}%</b>`));r.addEventListener("mouseleave",hideTip);
+      if(v>0.08)el("text",{x:x+bw/2,y:sy(acc+v/2)+4,"text-anchor":"middle","font-size":11,fill:tok("--panel"),"font-weight":600},svg,fmt(v*100,0)+"%");acc+=v;});
+    el("text",{x:x+bw/2,y:Hh-mb+18,"text-anchor":"middle","font-size":12,fill:tok("--fg")},svg,"h = "+h);});
+  order.slice().reverse().forEach((m,i)=>{el("rect",{x:W-mr+20,y:mt+10+i*22,width:12,height:12,fill:tok(COLORVAR[m])},svg);el("text",{x:W-mr+38,y:mt+20+i*22,"font-size":12,fill:tok("--fg")},svg,m);});
+}
+
+/* ---------- results explorer ---------- */
+let rxDs="VNI",rxMet="rmse";const hidden=new Set();
+function buildRxControls(){
+  const dsb=document.getElementById("rx-ds");dsb.innerHTML="";
+  DS.forEach(d=>{const b=document.createElement("button");b.type="button";b.textContent=d;b.setAttribute("aria-pressed",String(d===rxDs));b.onclick=()=>{rxDs=d;dsb.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));drawRx();};dsb.appendChild(b);});
+  document.querySelectorAll("#rx-met button").forEach(b=>b.onclick=()=>{rxMet=b.dataset.m;document.querySelectorAll("#rx-met button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));drawRx();});
+  const ch=document.getElementById("rx-chips");ch.innerHTML="";
+  MODELS.forEach(m=>{const b=document.createElement("button");b.type="button";b.className="chip";b.setAttribute("aria-pressed",String(!hidden.has(m)));
+    b.innerHTML=`<i style="background:${tok(COLORVAR[m])};${HYB(m)?"opacity:.55":""}"></i>${m}`;
+    b.onclick=()=>{hidden.has(m)?hidden.delete(m):hidden.add(m);b.setAttribute("aria-pressed",String(!hidden.has(m)));drawRx();};ch.appendChild(b);});
+}
+function drawRx(){
+  const svg=document.getElementById("rx-svg");svg.innerHTML="";
+  const W=680,Hh=340,ml=70,mr=20,mt=16,mb=44;
+  const vis=MODELS.filter(m=>!hidden.has(m));
+  const all=[];vis.forEach(m=>H.forEach((h,j)=>all.push(val(rxDs,m,j,rxMet))));
+  let sy,ticks,lab;
+  if(rxMet==="rmse"){let lo=Math.min(...all),hi=Math.max(...all);if(!all.length){lo=1;hi=10;}
+    const l0=Math.floor(Math.log10(lo)*2)/2,l1=Math.ceil(Math.log10(hi)*2)/2+(l1eq(lo,hi)?0.5:0);
+    sy=v=>mt+(l1-Math.log10(v))/(l1-l0)*(Hh-mt-mb);
+    ticks=[];for(let e=Math.floor(l0);e<=Math.ceil(l1);e++)[1,2,5].forEach(m=>{const v=m*Math.pow(10,e);if(Math.log10(v)>=l0-1e-9&&Math.log10(v)<=l1+1e-9)ticks.push(v);});
+    lab=v=>fmt(v,v<10?1:0);}
+  else{let lo=Math.min(-0.2,...all),hi=1;lo=Math.floor(lo*4)/4;sy=v=>mt+(hi-v)/(hi-lo)*(Hh-mt-mb);ticks=[];for(let v=lo;v<=1.0001;v+=0.25)ticks.push(+v.toFixed(2));lab=v=>fmt(v,2);}
+  function l1eq(a,b){return Math.abs(Math.log10(b)-Math.log10(a))<0.3;}
+  const sx=j=>ml+30+j*((W-ml-mr-60)/3);
+  ticks.forEach(v=>{el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v),stroke:tok("--rule"),"stroke-dasharray":v===0&&rxMet==="r2"?"none":"2 4"},svg);el("text",{x:ml-8,y:sy(v)+4,"text-anchor":"end","font-size":11,fill:tok("--muted")},svg,lab(v));});
+  H.forEach((h,j)=>el("text",{x:sx(j),y:Hh-mb+20,"text-anchor":"middle","font-size":12,fill:tok("--fg")},svg,"h = "+h));
+  el("text",{x:(ml+W-mr)/2,y:Hh-6,"text-anchor":"middle","font-size":12,fill:tok("--muted")},svg,T("Kỳ hạn dự báo (phiên)","Forecast horizon (sessions)"));
+  el("text",{transform:`translate(14,${(mt+Hh-mb)/2}) rotate(-90)`,"text-anchor":"middle","font-size":12,fill:tok("--muted")},svg,rxMet==="rmse"?T("RMSE (thang log)","RMSE (log scale)"):"R²");
+  // best per horizon
+  const best=H.map((h,j)=>{let bm=null,bv=null;MODELS.forEach(m=>{const v=val(rxDs,m,j,rxMet);if(bv===null||(rxMet==="rmse"?v<bv:v>bv)){bv=v;bm=m;}});return bm;});
+  const order=vis.slice().sort((a,b)=>(a==="KAN"||a==="Ensemble")-(b==="KAN"||b==="Ensemble"));
+  order.forEach(m=>{const col=tok(COLORVAR[m]);const pts=H.map((h,j)=>[sx(j),sy(val(rxDs,m,j,rxMet))]);
+    const strong=(m==="KAN"||m==="Ensemble"||m==="ARIMA");
+    el("path",{d:pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(""),fill:"none",stroke:col,"stroke-width":strong?2.6:1.7,"stroke-dasharray":HYB(m)?"5 4":"none",opacity:HYB(m)?.75:1},svg);
+    pts.forEach((p,j)=>{const isBest=best[j]===m;const c=el("circle",{cx:p[0],cy:p[1],r:isBest?6:3.6,fill:isBest?tok("--panel"):col,stroke:col,"stroke-width":isBest?2.4:0},svg);
+      const v=val(rxDs,m,j,rxMet);
+      c.addEventListener("mousemove",e=>showTip(e,`${m} · ${rxDs} · h = ${H[j]}<br>${rxMet==="rmse"?"RMSE":"R²"}: <b>${fmt(v,rxMet==="rmse"?2:4)}</b>${isBest?" · "+T("tốt nhất","best"):""}`));c.addEventListener("mouseleave",hideTip);});});
+}
+
+/* ---------- rank heatmap ---------- */
+function drawHeat(){
+  const t=document.getElementById("heat");
+  const rk={};MODELS.forEach(m=>rk[m]=[0,0,0,0]);
+  DS.forEach(d=>H.forEach((h,j)=>{MODELS.slice().sort((a,b)=>val(d,a,j,"rmse")-val(d,b,j,"rmse")).forEach((m,i)=>rk[m][j]+=(i+1)/DS.length);}));
+  let html=`<thead><tr><th>${T("Mô hình","Model")}</th>${H.map(h=>`<th style="text-align:center">h = ${h}</th>`).join("")}</tr></thead><tbody>`;
+  const c1=tok("--c1");
+  MODELS.forEach(m=>{html+=`<tr><td>${m}</td>`+rk[m].map(v=>{const a=Math.max(0,(9-v)/8);return `<td style="background:color-mix(in srgb, ${c1} ${Math.round(a*70)}%, transparent);color:${a>0.55?tok("--panel"):tok("--fg")}">${fmt(v,1)}</td>`;}).join("")+`</tr>`;});
+  t.innerHTML=html+"</tbody>";
+}
+
+/* ---------- KAN vs MLP / LSTM scatter ---------- */
+function drawSc(){
+  const svg=document.getElementById("sc-svg");svg.innerHTML="";
+  const W=640,Hh=340,ml=60,mr=20,mt=16,mb=46;
+  const lo=0.6,hi=2.8;
+  const sx=v=>ml+(Math.log(v)-Math.log(lo))/(Math.log(hi)-Math.log(lo))*(W-ml-mr);
+  const sy=v=>mt+(Math.log(1.25)-Math.log(v))/(Math.log(1.25)-Math.log(0.6))*(Hh-mt-mb);
+  // band ±5% around y=x? y = KAN/MLP, x = comparator/MLP
+  let band="";const xs=[];for(let i=0;i<=60;i++)xs.push(lo*Math.pow(hi/lo,i/60));
+  const yl=x=>Math.max(0.6,Math.min(1.25,x));
+  band="M"+xs.map(x=>sx(x).toFixed(1)+","+sy(yl(x*1.05)).toFixed(1)).join("L")+"L"+xs.slice().reverse().map(x=>sx(x).toFixed(1)+","+sy(yl(x*0.95)).toFixed(1)).join("L")+"Z";
+  el("path",{d:band,fill:tok("--rule"),opacity:.6},svg);
+  [0.6,0.8,1,1.2].forEach(v=>{el("line",{x1:ml,x2:W-mr,y1:sy(v),y2:sy(v),stroke:tok("--rule"),"stroke-dasharray":"2 4"},svg);el("text",{x:ml-8,y:sy(v)+4,"text-anchor":"end","font-size":11,fill:tok("--muted")},svg,fmt(v,1));});
+  [0.6,0.8,1,1.5,2,2.5].forEach(v=>{el("line",{x1:sx(v),x2:sx(v),y1:mt,y2:Hh-mb,stroke:tok("--rule"),"stroke-dasharray":"2 4"},svg);el("text",{x:sx(v),y:Hh-mb+16,"text-anchor":"middle","font-size":11,fill:tok("--muted")},svg,fmt(v,1));});
+  let dd="";xs.filter(x=>x<=1.25&&x>=0.6).forEach((x,i)=>dd+=(i?"L":"M")+sx(x).toFixed(1)+","+sy(x).toFixed(1));
+  el("path",{d:dd,fill:"none",stroke:tok("--fg"),"stroke-width":1.2,"stroke-dasharray":"4 4"},svg);
+  el("text",{x:(ml+W-mr)/2,y:Hh-8,"text-anchor":"middle","font-size":12,fill:tok("--muted")},svg,T("RMSE đối chứng / RMSE MLP","comparator RMSE / MLP RMSE"));
+  el("text",{transform:`translate(14,${(mt+Hh-mb)/2}) rotate(-90)`,"text-anchor":"middle","font-size":12,fill:tok("--muted")},svg,T("RMSE KAN / RMSE MLP","KAN RMSE / MLP RMSE"));
+  DS.forEach(d=>H.forEach((h,j)=>{const mlp=val(d,"MLP",j,"rmse"),kan=val(d,"KAN",j,"rmse"),lstm=val(d,"LSTM",j,"rmse");
+    const p1=el("circle",{cx:sx(1),cy:sy(kan/mlp),r:4.5,fill:tok("--m-mlp"),opacity:.8},svg);
+    const xl=Math.min(hi,lstm/mlp);const p2=el("circle",{cx:sx(xl),cy:sy(kan/mlp),r:4.5,fill:"none",stroke:tok("--m-lstm"),"stroke-width":2},svg);
+    p1.addEventListener("mousemove",e=>showTip(e,`${d} · h = ${h}<br>KAN/MLP: <b>${fmt(kan/mlp,3)}</b>`));p1.addEventListener("mouseleave",hideTip);
+    p2.addEventListener("mousemove",e=>showTip(e,`${d} · h = ${h}<br>LSTM/MLP: <b>${fmt(lstm/mlp,3)}</b> · KAN/MLP: <b>${fmt(kan/mlp,3)}</b>`));p2.addEventListener("mouseleave",hideTip);}));
+  const lg=el("g",{},svg);
+  el("circle",{cx:W-mr-220,cy:mt+12,r:4.5,fill:tok("--m-mlp")},lg);el("text",{x:W-mr-210,y:mt+16,"font-size":12,fill:tok("--fg")},lg,T("KAN so với MLP (x = 1)","KAN vs MLP (x = 1)"));
+  el("circle",{cx:W-mr-220,cy:mt+32,r:4.5,fill:"none",stroke:tok("--m-lstm"),"stroke-width":2},lg);el("text",{x:W-mr-210,y:mt+36,"font-size":12,fill:tok("--fg")},lg,T("KAN so với LSTM","KAN vs LSTM"));
+  el("text",{x:sx(2.2),y:sy(0.66),"text-anchor":"middle","font-size":11.5,fill:tok("--muted")},svg,T("dưới đường chéo: KAN tốt hơn","below diagonal: KAN better"));
+}
+
+function renderAll(){drawBS();drawEns();buildRxControls();drawRx();drawHeat();drawSc();}
+
+/* ---------- language ---------- */
+function setLang(l,save){root.setAttribute("data-lang",l);root.lang=l;
+  document.querySelectorAll(".langbar button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.lang===l)));
+  if(save){try{localStorage.setItem("kan-lang",l);}catch(e){}}
+  renderAll();}
+let init="vi";try{const s=localStorage.getItem("kan-lang");if(s==="vi"||s==="en")init=s;}catch(e){}
+document.querySelectorAll(".langbar button").forEach(b=>b.addEventListener("click",()=>setLang(b.dataset.lang,true)));
+setLang(init,false);
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",renderAll);}catch(e){}
+})();
+</script>
+</body>
+</html>
