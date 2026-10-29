@@ -1,0 +1,1630 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Quantum vs Classical Heston</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']], tags: 'none' }, options: { ignoreHtmlClass: 'tex-defer', processHtmlClass: 'tex-process' }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+<style>
+/* Layout: a technical-report column (~70ch) with numbered chapters; figures sit in framed plates; side TOC on wide screens */
+:root{
+  --bg:#f6f7f8; --fg:#16202b; --muted:#5a6672; --rule:#d6dce2; --panel:#ffffff;
+  --c1:#1d5f7a; --c2:#b07a1c; --c3:#b2443a; --c4:#3c7a52; --soft:#e4eff3;
+  --display:"IBM Plex Sans",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10161c; --fg:#e2e8ee; --muted:#9aa6b2; --rule:#2a343e; --panel:#161e26;
+  --c1:#6fb6d4; --c2:#e0b061; --c3:#e98a7f; --c4:#82c79a; --soft:#17293a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161c; --fg:#e2e8ee; --muted:#9aa6b2; --rule:#2a343e; --panel:#161e26;
+  --c1:#6fb6d4; --c2:#e0b061; --c3:#e98a7f; --c4:#82c79a; --soft:#17293a; color-scheme:dark}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.62;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:44px 90px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:200px minmax(0,1fr);gap:56px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-family:var(--display);font-size:13.5px;display:flex;flex-direction:column;gap:7px}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--c1)}
+nav.toc .h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+main{min-width:0;display:flex;flex-direction:column;gap:64px;max-width:800px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4.6vw,42px);font-weight:700;letter-spacing:-.015em}
+h2{font-size:25px;font-weight:600;display:flex;gap:14px;align-items:baseline;padding-top:6px;border-top:1px solid var(--rule)}
+h2 .n{font-family:var(--mono);font-size:14px;color:var(--c1);font-weight:500;min-width:1.4em}
+h3{font-size:18px;font-weight:600;margin-top:10px}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:24px}
+.prose{max-width:70ch}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.meta{font-family:var(--display);font-size:14.5px;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:14px}
+.abstract{background:var(--soft);padding:20px 22px;border-radius:6px;display:flex;flex-direction:column;gap:10px;font-size:17px}
+.abstract b{font-family:var(--display)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-top:4px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--c1);font-variant-numeric:tabular-nums}
+.stat .l{font-family:var(--display);font-size:12.5px;color:var(--muted)}
+.eq{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.note{font-size:15.5px;color:var(--muted)}
+figure{margin:0;display:flex;flex-direction:column;gap:10px}
+.plate{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px;overflow-x:auto}
+.plate svg{display:block;margin:0 auto}
+svg text{font-family:var(--display)}
+figcaption{font-family:var(--display);font-size:13.5px;color:var(--muted);max-width:75ch}
+figcaption b{color:var(--fg)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.pair>*{min-width:0}
+table{border-collapse:collapse;width:100%;font-family:var(--display);font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+.tw{overflow-x:auto}
+ul,ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+li::marker{color:var(--c1)}
+.def{border-left:3px solid var(--c1);padding:4px 0 4px 16px;display:flex;flex-direction:column;gap:8px}
+.def .t{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--c1)}
+.warn{border-left:3px solid var(--c3)}
+.warn .t{color:var(--c3)}
+.amber{border-left:3px solid var(--c2)}
+.amber .t{color:var(--c2)}
+.review{display:flex;flex-direction:column;gap:0}
+.ri{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.ri .k{font-family:var(--mono);font-size:13px;color:var(--c3);padding-top:3px}
+.ri h3{margin:0 0 6px;font-size:17px}
+.ri p{font-size:16.5px}
+.sev{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:2px}
+.sev.h{color:var(--c3);border:1px solid var(--c3)}
+.sev.m{color:var(--c2);border:1px solid var(--c2)}
+.sev.l{color:var(--muted);border:1px solid var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.card{border-top:2px solid var(--c1);padding-top:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{margin:0;font-size:16.5px}
+.card p{font-size:16px}
+code{font-family:var(--mono);font-size:.84em}
+a{color:var(--c1)}
+:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+@media (max-width:480px){body{font-size:17px}h2{font-size:22px}}
+
+.back{font-family:var(--display);font-size:14px;color:var(--c1);text-decoration:none}.back:hover{text-decoration:underline}
+.langbar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(12px,env(safe-area-inset-right,0px));z-index:20;display:flex;gap:0;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--panel);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.langbar button{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.04em;padding:7px 14px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.langbar button[aria-pressed="true"]{background:var(--c1);color:var(--panel)}
+.langbar button:focus-visible{outline:2px solid var(--c1);outline-offset:-2px}
+</style>
+
+<div class="langbar" role="group" aria-label="Language / Ngôn ngữ">
+  <button type="button" id="btn-vi" data-lang="vi" aria-pressed="true">VN</button>
+  <button type="button" id="btn-en" data-lang="en" aria-pressed="false">EN</button>
+</div>
+<div id="view-vi" class="tex-defer"><div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <div class="h">Mục lục</div>
+  <a href="#vi-s1">1 · Vấn đề</a>
+  <a href="#vi-s2">2 · Quy trình</a>
+  <a href="#vi-s3">3 · Mô hình Heston</a>
+  <a href="#vi-s4">4 · Calibrate bằng FFT</a>
+  <a href="#vi-s5">5 · Nền tảng lượng tử</a>
+  <a href="#vi-s6">6 · Amplitude estimation</a>
+  <a href="#vi-s7">7 · Mạch Heston lượng tử</a>
+  <a href="#vi-s8">8 · Dữ liệu & calibrate</a>
+  <a href="#vi-s9">9 · Kết quả</a>
+  <a href="#vi-s10">10 · Đánh giá kỹ thuật</a>
+  <a href="#vi-s11">11 · Ý nghĩa & ứng dụng</a>
+  <a href="#vi-s12">12 · Hướng mở rộng</a>
+  <a href="#vi-s13">13 · Tài liệu</a>
+</nav>
+
+<main>
+<header>
+  <a class="back" href="/research/">← Lily Ngo · Research</a>
+  <div class="eyebrow">Báo cáo nghiên cứu · Khóa luận Cử nhân Toán ứng dụng (Kỹ thuật Tài chính & Quản trị Rủi ro), ĐH Quốc Tế – ĐHQG-HCM, 07/2024</div>
+  <h1>Lượng tử và Cổ điển: Mô hình Heston trong định giá quyền chọn</h1>
+  <p class="meta">Ngô Thiện Mỹ · GVHD: PGS. TS. Trần Vũ Khanh</p>
+  <div class="abstract">
+    <p><b>Tóm tắt.</b> Khóa luận xây dựng một mạch lượng tử định giá quyền chọn mua kiểu châu Âu theo mô hình biến động ngẫu nhiên Heston. Trước hết, tham số Heston được calibrate theo cách cổ điển (định giá bằng FFT) trên quyền chọn S&amp;P 500 (SPX) tháng 12/2023. Bộ tham số này được đưa vào một mạch 7 qubit. Mạch nạp phân phối rời rạc của phương sai và giá theo một đường Euler, mã hóa payoff của call vào biên độ của một qubit phụ, rồi đọc giá bằng Quantum Amplitude Estimation (QAE). Trên simulator, giá lượng tử đạt MAE 20.23 và RMSE 29.03 điểm chỉ số so với giá thị trường. Nghiên cứu cho thấy toàn bộ quy trình chạy được từ đầu đến cuối. Nó cũng cho thấy với số qubit hiện nay, sai số rời rạc hóa lấn át lợi thế tăng tốc bậc hai trên lý thuyết của QAE.</p>
+    <div class="stats">
+      <div class="stat"><span class="v">18,828</span><span class="l">báo giá call SPX sau làm sạch</span></div>
+      <div class="stat"><span class="v">184</span><span class="l">lát (ngày, kỳ hạn) được calibrate</span></div>
+      <div class="stat"><span class="v">7</span><span class="l">qubit trong mạch định giá</span></div>
+      <div class="stat"><span class="v">20.23</span><span class="l">MAE (điểm chỉ số)</span></div>
+      <div class="stat"><span class="v">29.03</span><span class="l">RMSE (điểm chỉ số)</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="vi-s1">
+  <h2><span class="n">1</span>Vấn đề và đóng góp</h2>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p>Giá quyền chọn là một kỳ vọng. Dưới độ đo rủi ro trung tính \(\mathbb{Q}\), quyền chọn mua châu Âu với giá thực hiện \(K\) và đáo hạn \(T\) có giá</p>
+  </div>
+  <div class="eq">\[ C_0 = e^{-rT}\,\mathbb{E}^{\mathbb{Q}}\big[\max(S_T - K,\,0)\big]. \]</div>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p>Với mô hình đơn giản, kỳ vọng này có công thức đóng. Với mô hình sát thực tế hơn, hoặc sản phẩm phụ thuộc đường đi, ngân hàng ước lượng nó bằng Monte Carlo. Sai số Monte Carlo giảm theo \(1/\sqrt{N}\), nên muốn giảm sai số một nửa phải tốn gấp bốn lần số mẫu. Quantum Amplitude Estimation hứa hẹn sai số \(\sim 1/N\) theo số lần gọi oracle. Đó là tăng tốc bậc hai.</p>
+    <p>Phần lớn các ví dụ tài chính lượng tử chỉ định giá theo Black–Scholes, nơi đáp án đã có công thức đóng. Khóa luận đặt câu hỏi khó hơn: bộ công cụ lượng tử đó có xử lý được <b>biến động ngẫu nhiên</b> không, và nó gần <b>giá thị trường thật</b> đến đâu?</p>
+  </div>
+  <div class="cards">
+    <div class="card"><h3>Đóng góp 1</h3><p>Calibrate Heston–FFT cổ điển trên một tháng dữ liệu SPX, cho ra cấu trúc kỳ hạn hằng ngày của \((\rho,\sigma,\theta,\kappa,v_0)\).</p></div>
+    <div class="card"><h3>Đóng góp 2</h3><p>Mạch 7 qubit nối phân phối phương sai và giá theo đường Euler hai bước, định giá call bằng QAE.</p></div>
+    <div class="card"><h3>Đóng góp 3</h3><p>Đo sai số thực nghiệm so với giá thị trường, kèm phân tích nguồn gốc sai số.</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="vi-s2">
+  <h2><span class="n">2</span>Quy trình tổng thể</h2>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 760 300" width="100%" style="min-width:620px;max-width:760px" role="img" aria-label="pipeline">
+        <defs><marker id="vi-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+        <text x="10" y="20" font-size="11" letter-spacing="1.2" fill="var(--c2)" font-weight="600">CỔ ĐIỂN</text>
+        <text x="10" y="170" font-size="11" letter-spacing="1.2" fill="var(--c1)" font-weight="600">LƯỢNG TỬ (MÔ PHỎNG)</text>
+        <g font-size="12.5">
+          <rect x="10" y="32" width="160" height="84" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="90" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">Chuỗi quyền chọn SPX</text>
+          <text x="90" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">12/2023, cuối ngày</text>
+          <text x="90" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">lọc → 18.828 báo giá</text>
+
+          <rect x="210" y="32" width="170" height="84" rx="5" fill="var(--panel)" stroke="var(--c2)"/>
+          <text x="295" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">Định giá Heston–FFT</text>
+          <text x="295" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">hàm đặc trưng</text>
+          <text x="295" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">+ bình phương tối thiểu phi tuyến</text>
+
+          <rect x="420" y="32" width="160" height="84" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="500" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">Θ = (ρ, σ, θ, κ, v₀)</text>
+          <text x="500" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">một bộ cho mỗi</text>
+          <text x="500" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">(ngày quote, kỳ hạn)</text>
+        </g>
+        <line x1="170" y1="74" x2="208" y2="74" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+        <line x1="380" y1="74" x2="418" y2="74" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+        <path d="M580,74 L620,74 L620,140 L90,140 L90,180" fill="none" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+        <g font-size="12.5">
+          <rect x="10" y="182" width="160" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="90" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Mô hình bất định</text>
+          <text x="90" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">nạp p(v), p(S₁), p(S₂)</text>
+          <text x="90" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">vào biên độ</text>
+          <text x="90" y="264" text-anchor="middle" fill="var(--muted)" font-size="11.5">2 + 2 + 3 qubits</text>
+
+          <rect x="210" y="182" width="170" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="295" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Toán tử payoff F</text>
+          <text x="295" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">so sánh + R_y có điều khiển</text>
+          <text x="295" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">P(1) ≈ ½ + c(E f − ½)</text>
+
+          <rect x="420" y="182" width="160" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="500" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">QAE lặp</text>
+          <text x="500" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">ε = 0.02, α = 0.05</text>
+          <text x="500" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">ước lượng a = P(1)</text>
+
+          <rect x="620" y="182" width="130" height="96" rx="5" fill="var(--panel)" stroke="var(--c3)"/>
+          <text x="685" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Đánh giá</text>
+          <text x="685" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">giá so với mid</text>
+          <text x="685" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">MAE, RMSE</text>
+        </g>
+        <line x1="170" y1="230" x2="208" y2="230" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+        <line x1="380" y1="230" x2="418" y2="230" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+        <line x1="580" y1="230" x2="618" y2="230" stroke="var(--muted)" marker-end="url(#vi-ar)"/>
+      </svg>
+    </div>
+    <figcaption><b>Hình 1.</b> Phần cổ điển biến giá thị trường thành tham số mô hình. Phần lượng tử biến tham số thành giá. Hai phần chỉ dùng chung Θ, nên có thể cải tiến từng phần độc lập.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="vi-s3">
+  <h2><span class="n">3</span>Mô hình Heston</h2>
+  <h3>3.1 Vì sao rời Black–Scholes</h3>
+  <p class="prose">Black–Scholes giả định \(dS_t = rS_t\,dt + \sigma S_t\,dW_t\) với \(\sigma\) hằng số. Khi đó \(\ln S_T\) có phân phối chuẩn và mọi strike đều cho cùng một implied volatility. Thực tế implied volatility tạo thành độ lệch (skew): strike thấp có volatility cao hơn. Heston (1993) xử lý bằng cách cho phương sai tự đi theo một quá trình ngẫu nhiên riêng.</p>
+
+  <h3>3.2 Động lực dưới \(\mathbb{Q}\)</h3>
+  <div class="eq">\[ \begin{aligned} dS_t &= rS_t\,dt + \sqrt{v_t}\,S_t\,dW^S_t,\\ dv_t &= \kappa(\theta - v_t)\,dt + \sigma\sqrt{v_t}\,dW^v_t,\\ d\langle W^S, W^v\rangle_t &= \rho\,dt. \end{aligned} \]</div>
+  <div class="tw"><table>
+    <thead><tr><th>Ký hiệu</th><th>Vai trò</th><th>Tác động lên giá</th></tr></thead>
+    <tbody>
+      <tr><td>\(v_0\)</td><td>phương sai hiện tại</td><td>mức implied vol kỳ hạn ngắn</td></tr>
+      <tr><td>\(\theta\)</td><td>phương sai dài hạn</td><td>mức implied vol kỳ hạn dài</td></tr>
+      <tr><td>\(\kappa\)</td><td>tốc độ hồi quy</td><td>tốc độ cấu trúc kỳ hạn đi từ \(v_0\) về \(\theta\)</td></tr>
+      <tr><td>\(\sigma\)</td><td>biến động của phương sai</td><td>độ cong của smile, đuôi dày</td></tr>
+      <tr><td>\(\rho\)</td><td>tương quan giá – vol</td><td>độ dốc (skew); \(\rho&lt;0\) tạo skew trái của thị trường cổ phiếu</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Phương sai là một quá trình CIR (căn bậc hai). Kỳ vọng có điều kiện của nó có dạng đóng, ta sẽ dùng nó ở phần sau để kiểm tra cách rời rạc hóa trong mạch lượng tử:</p>
+  <div class="eq">\[ \mathbb{E}[v_T\mid v_0] = \theta + (v_0-\theta)e^{-\kappa T}, \qquad \mathbb{E}\Big[\int_0^T v_s\,ds\Big] = \theta T + (v_0-\theta)\frac{1-e^{-\kappa T}}{\kappa}. \]</div>
+  <p class="prose">Quá trình luôn dương khi thỏa điều kiện Feller \(2\kappa\theta \ge \sigma^2\). Nhiều lát SPX đã calibrate vi phạm điều kiện này: với lát 29/12/2023 → 15/03/2024, \(2\kappa\theta = 0.24 &lt; \sigma^2 = 0.34\). Vì vậy sơ đồ mô phỏng phải xử lý trường hợp \(v_t\) chạm 0.</p>
+
+  <h3>3.3 Hàm đặc trưng</h3>
+  <p class="prose">Heston là mô hình affine. Hàm đặc trưng của log-giá \(\phi_T(u) = \mathbb{E}[e^{iu\ln S_T}]\) có dạng mũ affine theo \((\ln S_0, v_0)\):</p>
+  <div class="eq">\[ \phi_T(u) = \exp\big(C(T,u) + D(T,u)\,v_0 + iu\ln S_0\big), \]</div>
+  <div class="eq">\[ \begin{aligned} d &= \sqrt{(\rho\sigma iu - \kappa)^2 + \sigma^2(iu + u^2)}, \qquad g = \frac{\kappa - \rho\sigma iu - d}{\kappa - \rho\sigma iu + d},\\ C(T,u) &= iurT + \frac{\kappa\theta}{\sigma^2}\Big[(\kappa - \rho\sigma iu - d)T - 2\ln\frac{1-ge^{-dT}}{1-g}\Big],\\ D(T,u) &= \frac{\kappa - \rho\sigma iu - d}{\sigma^2}\cdot\frac{1-e^{-dT}}{1-ge^{-dT}}. \end{aligned} \]</div>
+  <p class="prose note">Đây là dạng "little Heston trap" (Albrecher và cộng sự, 2007). Dạng này dùng \(e^{-dT}\) và tránh được bước nhảy nhánh của logarit phức mà dạng gốc gặp phải ở kỳ hạn dài.</p>
+
+  <h3>3.4 Rời rạc hóa Euler</h3>
+  <p class="prose">Mạch lượng tử không nạp được một đường liên tục. Nó cần một số ít bước thời gian rời rạc. Trên lưới \(t_j = j\Delta t\), sơ đồ Euler với full truncation \(v^+ = \max(v,0)\) (Lord, Koekkoek &amp; van Dijk, 2010) là</p>
+  <div class="eq">\[ \begin{aligned} v_{j+1} &= v_j + \kappa(\theta - v_j^+)\Delta t + \sigma\sqrt{v_j^+\Delta t}\;Z^v_j,\\ \ln S_{j+1} &= \ln S_j + \big(r - \tfrac12 v_j^+\big)\Delta t + \sqrt{v_j^+\Delta t}\,\big(\rho Z^v_j + \sqrt{1-\rho^2}\,Z^\perp_j\big), \end{aligned} \]</div>
+  <p class="prose">với \(Z^v_j, Z^\perp_j\) là các biến chuẩn tắc độc lập. Số hạng Cholesky \(\rho Z^v + \sqrt{1-\rho^2}Z^\perp\) là chỗ skew đi vào mô phỏng. Khi biết \(v_j\), log-giá tiếp theo có phân phối chuẩn, nên \(S_{j+1}\mid(S_j,v_j)\) có phân phối log-normal. Khóa luận dùng đúng cấu trúc có điều kiện này để dựng mạch.</p>
+</section>
+
+<!-- 4 -->
+<section id="vi-s4">
+  <h2><span class="n">4</span>Calibrate cổ điển bằng FFT</h2>
+  <p class="prose">Giá call không khả tích bình phương theo log-strike \(k=\ln K\), vì \(C\to S_0\) khi \(k\to-\infty\). Carr &amp; Madan (1999) nhân thêm hệ số giảm chấn \(e^{\alpha k}\) với \(\alpha&gt;0\). Giá đã giảm chấn \(c(k) = e^{\alpha k}C(k)\) có biến đổi Fourier</p>
+  <div class="eq">\[ \psi_T(u) = \frac{e^{-rT}\,\phi_T\big(u - (\alpha+1)i\big)}{\alpha^2 + \alpha - u^2 + i(2\alpha+1)u}, \qquad C(k) = \frac{e^{-\alpha k}}{\pi}\int_0^\infty \mathrm{Re}\big[e^{-iuk}\psi_T(u)\big]\,du. \]</div>
+  <p class="prose">Rời rạc hóa với \(u_j = j\eta\) và lưới log-strike \(k_m = -b + m\lambda\), \(m=0,\dots,N-1\). Tích phân trở thành một biến đổi Fourier rời rạc, FFT tính cho cả \(N\) strike với chi phí \(O(N\log N)\):</p>
+  <div class="eq">\[ C(k_m) \approx \frac{e^{-\alpha k_m}}{\pi}\sum_{j=0}^{N-1} e^{-i\frac{2\pi}{N}jm}\; e^{ibu_j}\,\psi_T(u_j)\,w_j\,\eta, \qquad \lambda\eta = \frac{2\pi}{N}. \]</div>
+  <p class="prose">Ràng buộc \(\lambda\eta = 2\pi/N\) là đánh đổi Nyquist. Lưới strike mịn (λ nhỏ) buộc lưới tần số thô (η lớn), và ngược lại. Trọng số \(w_j\) lấy từ quy tắc hình thang hoặc Simpson.</p>
+  <p class="prose">Calibrate là giải bài toán bình phương tối thiểu phi tuyến cho từng lát (ngày quote, kỳ hạn):</p>
+  <div class="eq">\[ \Theta^\star = \arg\min_{\Theta=(\kappa,\theta,v_0,\sigma,\rho)} \sum_{i=1}^{N}\Big(C^{\text{mkt}}(K_i,T) - C^{\text{Heston}}(K_i,T;\Theta)\Big)^2. \]</div>
+  <p class="prose note">Hàm mục tiêu không lồi. Các tham số cũng có phần dư thừa: khi \(\kappa\) lớn, phương sai bị kéo về \(\theta\) rất nhanh nên \(v_0\) hầu như không ảnh hưởng, trừ kỳ hạn rất ngắn. Điều này thấy rõ trong các giá trị calibrate ở Mục 8.</p>
+</section>
+
+<!-- 5 -->
+<section id="vi-s5">
+  <h2><span class="n">5</span>Nền tảng tính toán lượng tử</h2>
+  <h3>5.1 Qubit và thanh ghi</h3>
+  <div class="pair" style="align-items:center">
+    <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+      <p>Một qubit là một vector đơn vị trong \(\mathbb{C}^2\):</p>
+      <div class="eq">\[ |\psi\rangle = \cos\tfrac{\vartheta}{2}|0\rangle + e^{i\varphi}\sin\tfrac{\vartheta}{2}|1\rangle. \]</div>
+      <p>Đo qubit cho kết quả 1 với xác suất \(\sin^2(\vartheta/2)\). Một thanh ghi \(n\) qubit nằm trong \((\mathbb{C}^2)^{\otimes n}\cong\mathbb{C}^{2^n}\), nên nó chứa được cả một phân phối rời rạc trên \(2^n\) điểm lưới cùng lúc:</p>
+      <div class="eq">\[ |\psi\rangle = \sum_{i=0}^{2^n-1}\sqrt{p_i}\,|i\rangle_n,\qquad \sum_i p_i = 1. \]</div>
+    </div>
+    <figure>
+      <div class="plate">
+        <svg viewBox="0 0 300 290" width="100%" style="max-width:300px" role="img" aria-label="Bloch sphere">
+          <circle cx="150" cy="150" r="100" fill="none" stroke="var(--muted)"/>
+          <ellipse cx="150" cy="150" rx="100" ry="28" fill="none" stroke="var(--rule)"/>
+          <path d="M50,150 A100,28 0 0 0 250,150" fill="none" stroke="var(--muted)"/>
+          <line x1="150" y1="40" x2="150" y2="262" stroke="var(--rule)" stroke-dasharray="3 3"/>
+          <text x="150" y="32" text-anchor="middle" font-size="14" fill="var(--fg)">|0⟩</text>
+          <text x="150" y="280" text-anchor="middle" font-size="14" fill="var(--fg)">|1⟩</text>
+          <text x="262" y="154" font-size="12" fill="var(--muted)">|+⟩</text>
+          <line x1="150" y1="150" x2="214" y2="88" stroke="var(--c1)" stroke-width="2.5"/>
+          <circle cx="214" cy="88" r="5" fill="var(--c1)"/>
+          <line x1="214" y1="88" x2="214" y2="163" stroke="var(--c1)" stroke-dasharray="3 3"/>
+          <line x1="150" y1="150" x2="214" y2="163" stroke="var(--c1)" stroke-dasharray="3 3"/>
+          <path d="M150,112 A38,38 0 0 1 178,124" fill="none" stroke="var(--c2)" stroke-width="1.6"/>
+          <text x="168" y="108" font-size="13" fill="var(--c2)">ϑ</text>
+          <path d="M130,160 A26,9 0 0 0 176,158" fill="none" stroke="var(--c2)" stroke-width="1.6"/>
+          <text x="148" y="182" font-size="13" fill="var(--c2)">φ</text>
+          <text x="222" y="84" font-size="13" fill="var(--c1)">|ψ⟩</text>
+        </svg>
+      </div>
+      <figcaption><b>Hình 2.</b> Mặt cầu Bloch. Góc cực ϑ quyết định xác suất đo; phép quay R_y di chuyển trạng thái dọc kinh tuyến.</figcaption>
+    </figure>
+  </div>
+
+  <h3>5.2 Các cổng mà mạch sử dụng</h3>
+  <div class="eq">\[ H = \tfrac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\quad R_y(\beta) = \begin{pmatrix}\cos\frac\beta2 & -\sin\frac\beta2\\ \sin\frac\beta2 & \cos\frac\beta2\end{pmatrix},\quad \mathrm{CNOT} = |0\rangle\langle0|\otimes I + |1\rangle\langle1|\otimes X. \]</div>
+  <ul class="prose">
+    <li><b>Hadamard</b> \(H^{\otimes n}|0\rangle = 2^{-n/2}\sum_i|i\rangle\) tạo chồng chập đều.</li>
+    <li><b>\(R_y\) có điều khiển</b> quay qubit đích một góc phụ thuộc thanh ghi điều khiển. Cả phân phối lẫn payoff đều được ghi vào biên độ theo cách này.</li>
+    <li><b>Bộ so sánh</b> (dựng từ CNOT/Toffoli) lật một qubit phụ khi giá trị \(i\) của thanh ghi thỏa \(S_i \ge K\).</li>
+  </ul>
+
+  <h3>5.3 Nạp một phân phối</h3>
+  <p class="prose">Để nạp một phân phối liên tục trên \([\ell, h]\) bằng \(n\) qubit, ta cắt cụt, rời rạc hóa trên lưới affine \(x_i = \ell + i\,\frac{h-\ell}{2^n-1}\), rồi chuẩn hóa lại:</p>
+  <div class="eq">\[ p_i = \frac{f(x_i)}{\sum_{j} f(x_j)},\qquad \mathcal{P}_X|0\rangle_n = \sum_{i=0}^{2^n-1}\sqrt{p_i}\,|i\rangle_n. \]</div>
+  <p class="prose">Cách dựng Grover–Rudolph làm việc này bằng một chuỗi phép quay \(R_y\) có điều khiển, mỗi qubit một tầng. Trong khóa luận, \(f\) là mật độ chuẩn cho phương sai và log-normal cho giá, giới hạn ở kỳ vọng \(\pm 3\) độ lệch chuẩn.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 310" width="100%" style="max-width:640px" role="img" aria-label="amplitude loading">
+<line x1="66" y1="246.0" x2="622" y2="246.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="250.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66" y1="170.0" x2="622" y2="170.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="174.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.2</text>
+<line x1="66" y1="94.0" x2="622" y2="94.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="98.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.4</text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.6</text>
+<line x1="106.7" y1="246" x2="106.7" y2="251" stroke="var(--muted)"/>
+<text x="106.7" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|0⟩</text>
+<line x1="174.5" y1="246" x2="174.5" y2="251" stroke="var(--muted)"/>
+<text x="174.5" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|1⟩</text>
+<line x1="242.3" y1="246" x2="242.3" y2="251" stroke="var(--muted)"/>
+<text x="242.3" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|2⟩</text>
+<line x1="310.1" y1="246" x2="310.1" y2="251" stroke="var(--muted)"/>
+<text x="310.1" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|3⟩</text>
+<line x1="377.9" y1="246" x2="377.9" y2="251" stroke="var(--muted)"/>
+<text x="377.9" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|4⟩</text>
+<line x1="445.7" y1="246" x2="445.7" y2="251" stroke="var(--muted)"/>
+<text x="445.7" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|5⟩</text>
+<line x1="513.5" y1="246" x2="513.5" y2="251" stroke="var(--muted)"/>
+<text x="513.5" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|6⟩</text>
+<line x1="581.3" y1="246" x2="581.3" y2="251" stroke="var(--muted)"/>
+<text x="581.3" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|7⟩</text>
+<line x1="66" y1="246" x2="622" y2="246" stroke="var(--muted)"/>
+<text x="344" y="302" text-anchor="middle" font-size="12.5" fill="var(--fg)">Trạng thái cơ sở |i⟩ (3 qubit) và mức giá S_i</text>
+<text transform="translate(14,132) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">giá trị</text>
+<text x="106.7" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,195</text><text x="174.5" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,326</text><text x="242.3" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,457</text><text x="310.1" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,588</text><text x="377.9" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,719</text><text x="445.7" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,850</text><text x="513.5" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,980</text><text x="581.3" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">5,111</text>
+<rect x="83.7" y="244.4" width="22" height="1.6" fill="var(--c1)"/>
+<rect x="151.5" y="229.5" width="22" height="16.5" fill="var(--c1)"/>
+<rect x="219.3" y="177.1" width="22" height="68.9" fill="var(--c1)"/>
+<rect x="287.1" y="119.7" width="22" height="126.3" fill="var(--c1)"/>
+<rect x="354.9" y="137.5" width="22" height="108.5" fill="var(--c1)"/>
+<rect x="422.7" y="199.5" width="22" height="46.5" fill="var(--c1)"/>
+<rect x="490.5" y="235.5" width="22" height="10.5" fill="var(--c1)"/>
+<rect x="558.3" y="244.7" width="22" height="1.3" fill="var(--c1)"/>
+<rect x="107.7" y="221.4" width="22" height="24.6" fill="var(--c2)"/>
+<rect x="175.5" y="166.9" width="22" height="79.1" fill="var(--c2)"/>
+<rect x="243.3" y="84.2" width="22" height="161.8" fill="var(--c2)"/>
+<rect x="311.1" y="26.9" width="22" height="219.1" fill="var(--c2)"/>
+<rect x="378.9" y="43.0" width="22" height="203.0" fill="var(--c2)"/>
+<rect x="446.7" y="113.1" width="22" height="132.9" fill="var(--c2)"/>
+<rect x="514.5" y="182.9" width="22" height="63.1" fill="var(--c2)"/>
+<rect x="582.3" y="223.7" width="22" height="22.3" fill="var(--c2)"/>
+<rect x="470" y="23" width="16" height="10" fill="var(--c1)"/>
+<text x="496" y="32" font-size="12" fill="var(--fg)">xác suất p_i</text>
+<rect x="470" y="41" width="16" height="10" fill="var(--c2)"/>
+<text x="496" y="50" font-size="12" fill="var(--fg)">biên độ √p_i</text>
+</svg></div>
+    <figcaption><b>Hình 3.</b> Phân phối log-normal 8 điểm của S_T nạp vào 3 qubit. Phép đo trả về |i⟩ với xác suất p_i, tức bình phương biên độ đã lưu. Tham số: S₀ = 4.594,63 (giá đóng cửa SPX ngày 01/12/2023), T = 61 ngày, r = 5%, phương sai từ lát calibrate đáo hạn 31/01/2024. Tính để minh họa.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 -->
+<section id="vi-s6">
+  <h2><span class="n">6</span>Quantum Amplitude Estimation</h2>
+  <h3>6.1 Từ kỳ vọng sang biên độ</h3>
+  <p class="prose">Gọi \(\mathcal{P}\) là toán tử nạp \(\{p_i\}\) trên \(n\) qubit, và \(\mathcal{F}\) quay thêm một qubit (qubit mục tiêu) theo hàm \(f:\{0,\dots,2^n-1\}\to[0,1]\):</p>
+  <div class="eq">\[ \mathcal{F}:\ |i\rangle_n|0\rangle \mapsto |i\rangle_n\Big(\sqrt{1-f(i)}\,|0\rangle + \sqrt{f(i)}\,|1\rangle\Big). \]</div>
+  <p class="prose">Toán tử ghép \(\mathcal{A} = \mathcal{F}(\mathcal{P}\otimes I)\) tạo ra</p>
+  <div class="eq">\[ \mathcal{A}|0\rangle_{n+1} = \sqrt{1-a}\,|\psi_0\rangle|0\rangle + \sqrt{a}\,|\psi_1\rangle|1\rangle, \qquad a = \sum_i p_i f(i) = \mathbb{E}[f(X)]. \]</div>
+  <div class="def"><span class="t">Ý chính</span><p class="prose">Kỳ vọng cần tính chính là xác suất đọc được 1 trên qubit mục tiêu. Bài toán định giá trở thành bài toán ước lượng một biên độ.</p></div>
+
+  <h3>6.2 Toán tử Grover là một phép quay</h3>
+  <p class="prose">Đặt \(a = \sin^2\theta_a\). Định nghĩa các phép phản xạ \(S_\chi\) (đổi dấu các trạng thái có qubit mục tiêu bằng 1) và \(S_0 = I - 2|0\rangle\langle0|\). Toán tử Grover</p>
+  <div class="eq">\[ \mathcal{Q} = -\,\mathcal{A}\,S_0\,\mathcal{A}^{\dagger}S_\chi \]</div>
+  <p class="prose">tác động lên mặt phẳng hai chiều sinh bởi trạng thái "xấu" \(|\psi_0\rangle|0\rangle\) và trạng thái "tốt" \(|\psi_1\rangle|1\rangle\) như một phép quay góc \(2\theta_a\). Sau \(k\) lần áp dụng,</p>
+  <div class="eq">\[ \mathcal{Q}^k\mathcal{A}|0\rangle = \cos\big((2k+1)\theta_a\big)|\psi_0\rangle|0\rangle + \sin\big((2k+1)\theta_a\big)|\psi_1\rangle|1\rangle. \]</div>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 520 300" width="100%" style="max-width:520px" role="img" aria-label="Grover rotation">
+        <defs><marker id="vi-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="context-stroke"/></marker></defs>
+        <line x1="60" y1="260" x2="470" y2="260" stroke="var(--muted)" marker-end="url(#vi-ar2)"/>
+        <line x1="60" y1="260" x2="60" y2="30" stroke="var(--muted)" marker-end="url(#vi-ar2)"/>
+        <text x="476" y="264" font-size="12.5" fill="var(--fg)">|bad⟩</text>
+        <text x="40" y="24" font-size="12.5" fill="var(--fg)">|good⟩</text>
+        <path d="M60,40 A220,220 0 0 1 280,260" fill="none" stroke="var(--rule)" stroke-dasharray="3 4"/>
+        <!-- theta_a = 15deg -->
+        <line x1="60" y1="260" x2="272.5" y2="203.1" stroke="var(--c1)" stroke-width="2.4" marker-end="url(#vi-ar2)"/>
+        <text x="282" y="204" font-size="12.5" fill="var(--c1)">𝒜|0⟩</text>
+        <!-- 3 theta = 45deg -->
+        <line x1="60" y1="260" x2="215.6" y2="104.4" stroke="var(--c2)" stroke-width="2.4" marker-end="url(#vi-ar2)"/>
+        <text x="222" y="100" font-size="12.5" fill="var(--c2)">𝒬𝒜|0⟩</text>
+        <!-- 5 theta = 75deg -->
+        <line x1="60" y1="260" x2="116.9" y2="47.5" stroke="var(--c3)" stroke-width="2.4" marker-end="url(#vi-ar2)"/>
+        <text x="124" y="46" font-size="12.5" fill="var(--c3)">𝒬²𝒜|0⟩</text>
+        <path d="M150,260 A90,90 0 0 0 146.9,236.7" fill="none" stroke="var(--c1)"/>
+        <text x="158" y="250" font-size="12" fill="var(--c1)">θₐ</text>
+        <path d="M168.6,231 A112,112 0 0 0 139.2,180.8" fill="none" stroke="var(--c2)"/>
+        <text x="172" y="208" font-size="12" fill="var(--c2)">2θₐ</text>
+        <text x="300" y="150" font-size="12" fill="var(--muted)">mỗi 𝒬 cộng thêm 2θₐ;</text>
+        <text x="300" y="168" font-size="12" fill="var(--muted)">đo sau k bước</text>
+        <text x="300" y="186" font-size="12" fill="var(--muted)">lấy mẫu sin²((2k+1)θₐ)</text>
+      </svg>
+    </div>
+    <figcaption><b>Hình 4.</b> Hình học của amplitude amplification (vẽ với θₐ = 15°). Góc tăng tuyến tính theo k, nên thông tin về θₐ tích lũy tuyến tính theo số lần gọi oracle. Đó là nguồn gốc của tốc độ 1/N.</figcaption>
+  </figure>
+
+  <h3>6.3 Ước lượng và sai số</h3>
+  <p class="prose">QAE chuẩn (Brassard và cộng sự, 2002) chạy ước lượng pha lượng tử trên \(\mathcal{Q}\) với \(m\) qubit đánh giá, \(M = 2^m\). Với xác suất ít nhất \(8/\pi^2\),</p>
+  <div class="eq">\[ |\tilde a - a| \le \frac{2\pi\sqrt{a(1-a)}}{M} + \frac{\pi^2}{M^2} = O(M^{-1}). \]</div>
+  <p class="prose">Monte Carlo cổ điển với \(M\) mẫu có sai số chuẩn \(\sqrt{a(1-a)/M} = O(M^{-1/2})\). Khóa luận dùng <b>Iterative QAE</b> (Grinko và cộng sự, 2021). Phương pháp này bỏ ước lượng pha, chọn dãy lũy thừa \(k\) một cách thích nghi, và được cấu hình bằng độ chính xác mục tiêu \(\varepsilon\) cùng mức tin cậy \(1-\alpha\). Khóa luận đặt \(\varepsilon = 0.02\), \(\alpha = 0.05\). IQAE giữ chi phí \(O(1/\varepsilon)\) lần gọi (nhân thêm hệ số \(\log(1/\alpha)\)) và không cần qubit đánh giá, điều quan trọng khi chỉ có 7 qubit.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 320" width="100%" style="max-width:640px" role="img" aria-label="query complexity">
+<line x1="66" y1="270.0" x2="622" y2="270.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="274.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>1</tspan></text>
+<line x1="66" y1="234.0" x2="622" y2="234.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="238.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>2</tspan></text>
+<line x1="66" y1="198.0" x2="622" y2="198.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="202.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>3</tspan></text>
+<line x1="66" y1="162.0" x2="622" y2="162.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="166.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>4</tspan></text>
+<line x1="66" y1="126.0" x2="622" y2="126.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="130.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>5</tspan></text>
+<line x1="66" y1="90.0" x2="622" y2="90.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="94.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>6</tspan></text>
+<line x1="66" y1="54.0" x2="622" y2="54.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="58.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>7</tspan></text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>8</tspan></text>
+<line x1="66.0" y1="270" x2="66.0" y2="275" stroke="var(--muted)"/>
+<text x="66.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−1</tspan></text>
+<line x1="251.3" y1="270" x2="251.3" y2="275" stroke="var(--muted)"/>
+<text x="251.3" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−2</tspan></text>
+<line x1="436.7" y1="270" x2="436.7" y2="275" stroke="var(--muted)"/>
+<text x="436.7" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−3</tspan></text>
+<line x1="622.0" y1="270" x2="622.0" y2="275" stroke="var(--muted)"/>
+<text x="622.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−4</tspan></text>
+<line x1="66" y1="270" x2="622" y2="270" stroke="var(--muted)"/>
+<text x="344" y="312" text-anchor="middle" font-size="12.5" fill="var(--fg)">Sai số mục tiêu ε (σ = 1)</text>
+<text transform="translate(14,144) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">Số mẫu / số lần gọi oracle N</text>
+<line x1="195.5" y1="270.0" x2="195.5" y2="18.0" stroke="var(--c2)" stroke-dasharray="4 4"/><circle cx="195.5" cy="183.7" r="4" fill="var(--c3)"/><circle cx="195.5" cy="226.9" r="4" fill="var(--c1)"/><text x="203.5" y="177.7" font-size="11.5" fill="var(--fg)">2,500</text><text x="203.5" y="240.9" font-size="11.5" fill="var(--fg)">≈157</text><text x="201.5" y="262.0" font-size="11.5" fill="var(--c2)">ε = 0.02 (luận văn)</text>
+<path d="M66.0,234.0 L80.3,228.5 L94.5,222.9 L108.8,217.4 L123.0,211.8 L137.3,206.3 L151.5,200.8 L165.8,195.2 L180.1,189.7 L194.3,184.2 L208.6,178.6 L222.8,173.1 L237.1,167.5 L251.3,162.0 L265.6,156.5 L279.8,150.9 L294.1,145.4 L308.4,139.8 L322.6,134.3 L336.9,128.8 L351.1,123.2 L365.4,117.7 L379.6,112.2 L393.9,106.6 L408.2,101.1 L422.4,95.5 L436.7,90.0 L450.9,84.5 L465.2,78.9 L479.4,73.4 L493.7,67.8 L507.9,62.3 L522.2,56.8 L536.5,51.2 L550.7,45.7 L565.0,40.2 L579.2,34.6 L593.5,29.1 L607.7,23.5 L622.0,18.0" fill="none" stroke="var(--c3)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,252.1 L80.3,249.3 L94.5,246.6 L108.8,243.8 L123.0,241.0 L137.3,238.3 L151.5,235.5 L165.8,232.7 L180.1,229.9 L194.3,227.2 L208.6,224.4 L222.8,221.6 L237.1,218.9 L251.3,216.1 L265.6,213.3 L279.8,210.6 L294.1,207.8 L308.4,205.0 L322.6,202.3 L336.9,199.5 L351.1,196.7 L365.4,193.9 L379.6,191.2 L393.9,188.4 L408.2,185.6 L422.4,182.9 L436.7,180.1 L450.9,177.3 L465.2,174.6 L479.4,171.8 L493.7,169.0 L507.9,166.3 L522.2,163.5 L536.5,160.7 L550.7,157.9 L565.0,155.2 L579.2,152.4 L593.5,149.6 L607.7,146.9 L622.0,144.1" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<line x1="84" y1="30" x2="104" y2="30" stroke="var(--c3)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="34" font-size="12" fill="var(--fg)">Monte Carlo cổ điển  N ≈ σ²/ε²</text>
+<line x1="84" y1="48" x2="104" y2="48" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="52" font-size="12" fill="var(--fg)">Amplitude estimation  N ≈ π/ε</text>
+</svg></div>
+    <figcaption><b>Hình 5.</b> Chi phí để đạt sai số ε, bỏ qua hằng số. Ở mục tiêu ε = 0.02 của khóa luận, Monte Carlo cần khoảng 2.500 mẫu, QAE khoảng 157 lần gọi oracle. Khoảng cách tăng gấp 10 lần cho mỗi chữ số thập phân chính xác thêm.</figcaption>
+  </figure>
+
+  <h3>6.4 Mã hóa payoff của call</h3>
+  <p class="prose">\(\mathcal{F}\) phải trả giá trị trong \([0,1]\), nên payoff được chuẩn hóa trên lưới giá:</p>
+  <div class="eq">\[ f(i) = \frac{\max(S_i - K, 0)}{S_{\max} - K}\in[0,1], \qquad C_0 = e^{-rT}(S_{\max}-K)\,\mathbb{E}[f]. \]</div>
+  <p class="prose">Bộ so sánh đánh dấu \(S_i \ge K\). Trên nhánh đó, một \(R_y\) có điều khiển áp góc quay affine theo \(i\). Vì \(\sin^2\) không tuyến tính, thủ thuật của Woerner &amp; Egger (2019) dùng vùng gần tuyến tính quanh \(\pi/4\):</p>
+  <div class="eq">\[ \sin^2\!\Big(\tfrac{\pi}{4} + \delta\Big) = \tfrac12 + \tfrac12\sin 2\delta = \tfrac12 + \delta - \tfrac23\delta^3 + O(\delta^5),\qquad \delta_i = \tfrac{\pi}{2}c\,\big(f(i)-\tfrac12\big). \]</div>
+  <p class="prose">Lấy tổng theo phân phối ta có \(P(1) \approx \tfrac12 + \tfrac{\pi}{2}c\,(\mathbb{E}[f]-\tfrac12)\), rồi giải ngược ra \(\mathbb{E}[f]\). Có hai loại sai số kéo ngược chiều nhau:</p>
+  <div class="eq">\[ \big|\widehat{\mathbb{E}f} - \mathbb{E}f\big| \;\lesssim\; \underbrace{\tfrac{2}{3}\cdot\tfrac{(\pi c/4)^3}{\pi c/2}}_{\text{bias} \;=\; O(c^2)} \;+\; \underbrace{\frac{\varepsilon}{\pi c/2}}_{\text{QAE noise} \;=\; O(\varepsilon/c)}. \]</div>
+  <p class="prose">\(c\) nhỏ làm hàm sin gần tuyến tính nhưng thu nhỏ tín hiệu, nên nhiễu QAE bị khuếch đại theo \(1/c\). Cân bằng hai số hạng cho \(c\propto\varepsilon^{1/3}\) và sai số tổng \(O(\varepsilon^{2/3})\), tức \(O(M^{-2/3})\) theo số lần gọi oracle. Vẫn tốt hơn \(M^{-1/2}\) của Monte Carlo, nhưng không đạt trọn \(M^{-1}\). Woerner &amp; Egger cũng nêu đúng tốc độ này.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 320" width="100%" style="max-width:640px" role="img" aria-label="payoff encoding">
+<line x1="66" y1="262.1" x2="622" y2="262.1" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="266.1" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.25</text>
+<line x1="66" y1="222.8" x2="622" y2="222.8" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="226.8" text-anchor="end" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="66" y1="183.4" x2="622" y2="183.4" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="187.4" text-anchor="end" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="66" y1="144.0" x2="622" y2="144.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="148.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.5</text>
+<line x1="66" y1="104.6" x2="622" y2="104.6" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="108.6" text-anchor="end" font-size="11.5" fill="var(--muted)">0.75</text>
+<line x1="66" y1="65.2" x2="622" y2="65.2" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="69.2" text-anchor="end" font-size="11.5" fill="var(--muted)">1</text>
+<line x1="66" y1="25.9" x2="622" y2="25.9" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="29.9" text-anchor="end" font-size="11.5" fill="var(--muted)">1.25</text>
+<line x1="66.0" y1="270" x2="66.0" y2="275" stroke="var(--muted)"/>
+<text x="66.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="205.0" y1="270" x2="205.0" y2="275" stroke="var(--muted)"/>
+<text x="205.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="344.0" y1="270" x2="344.0" y2="275" stroke="var(--muted)"/>
+<text x="344.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.5</text>
+<line x1="483.0" y1="270" x2="483.0" y2="275" stroke="var(--muted)"/>
+<text x="483.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.75</text>
+<line x1="622.0" y1="270" x2="622.0" y2="275" stroke="var(--muted)"/>
+<text x="622.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">1</text>
+<line x1="66" y1="270" x2="622" y2="270" stroke="var(--muted)"/>
+<text x="344" y="312" text-anchor="middle" font-size="12.5" fill="var(--fg)">Payoff chuẩn hóa f(S_i) ∈ [0, 1]</text>
+<text transform="translate(14,144) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">P(ancilla = 1 | i)</text>
+<path d="M66.0,222.8 L71.6,222.7 L77.1,222.6 L82.7,222.4 L88.2,222.1 L93.8,221.8 L99.4,221.4 L104.9,220.9 L110.5,220.3 L116.0,219.6 L121.6,218.9 L127.2,218.1 L132.7,217.2 L138.3,216.3 L143.8,215.3 L149.4,214.2 L155.0,213.0 L160.5,211.8 L166.1,210.5 L171.6,209.1 L177.2,207.7 L182.8,206.2 L188.3,204.7 L193.9,203.1 L199.4,201.4 L205.0,199.7 L210.6,197.9 L216.1,196.1 L221.7,194.2 L227.2,192.3 L232.8,190.3 L238.4,188.3 L243.9,186.2 L249.5,184.1 L255.0,181.9 L260.6,179.8 L266.2,177.5 L271.7,175.3 L277.3,173.0 L282.8,170.7 L288.4,168.3 L294.0,166.0 L299.5,163.6 L305.1,161.2 L310.6,158.8 L316.2,156.3 L321.8,153.9 L327.3,151.4 L332.9,148.9 L338.4,146.5 L344.0,144.0 L349.6,141.5 L355.1,139.1 L360.7,136.6 L366.2,134.1 L371.8,131.7 L377.4,129.2 L382.9,126.8 L388.5,124.4 L394.0,122.0 L399.6,119.7 L405.2,117.3 L410.7,115.0 L416.3,112.7 L421.8,110.5 L427.4,108.2 L433.0,106.1 L438.5,103.9 L444.1,101.8 L449.6,99.7 L455.2,97.7 L460.8,95.7 L466.3,93.8 L471.9,91.9 L477.4,90.1 L483.0,88.3 L488.6,86.6 L494.1,84.9 L499.7,83.3 L505.2,81.8 L510.8,80.3 L516.4,78.9 L521.9,77.5 L527.5,76.2 L533.0,75.0 L538.6,73.8 L544.2,72.7 L549.7,71.7 L555.3,70.8 L560.8,69.9 L566.4,69.1 L572.0,68.4 L577.5,67.7 L583.1,67.1 L588.6,66.6 L594.2,66.2 L599.8,65.9 L605.3,65.6 L610.9,65.4 L616.4,65.3 L622.0,65.2" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,267.7 L71.6,265.2 L77.1,262.8 L82.7,260.3 L88.2,257.8 L93.8,255.3 L99.4,252.9 L104.9,250.4 L110.5,247.9 L116.0,245.4 L121.6,243.0 L127.2,240.5 L132.7,238.0 L138.3,235.5 L143.8,233.1 L149.4,230.6 L155.0,228.1 L160.5,225.6 L166.1,223.2 L171.6,220.7 L177.2,218.2 L182.8,215.7 L188.3,213.3 L193.9,210.8 L199.4,208.3 L205.0,205.9 L210.6,203.4 L216.1,200.9 L221.7,198.4 L227.2,196.0 L232.8,193.5 L238.4,191.0 L243.9,188.5 L249.5,186.1 L255.0,183.6 L260.6,181.1 L266.2,178.6 L271.7,176.2 L277.3,173.7 L282.8,171.2 L288.4,168.7 L294.0,166.3 L299.5,163.8 L305.1,161.3 L310.6,158.8 L316.2,156.4 L321.8,153.9 L327.3,151.4 L332.9,148.9 L338.4,146.5 L344.0,144.0 L349.6,141.5 L355.1,139.1 L360.7,136.6 L366.2,134.1 L371.8,131.6 L377.4,129.2 L382.9,126.7 L388.5,124.2 L394.0,121.7 L399.6,119.3 L405.2,116.8 L410.7,114.3 L416.3,111.8 L421.8,109.4 L427.4,106.9 L433.0,104.4 L438.5,101.9 L444.1,99.5 L449.6,97.0 L455.2,94.5 L460.8,92.0 L466.3,89.6 L471.9,87.1 L477.4,84.6 L483.0,82.1 L488.6,79.7 L494.1,77.2 L499.7,74.7 L505.2,72.3 L510.8,69.8 L516.4,67.3 L521.9,64.8 L527.5,62.4 L533.0,59.9 L538.6,57.4 L544.2,54.9 L549.7,52.5 L555.3,50.0 L560.8,47.5 L566.4,45.0 L572.0,42.6 L577.5,40.1 L583.1,37.6 L588.6,35.1 L594.2,32.7 L599.8,30.2 L605.3,27.7 L610.9,25.2 L616.4,22.8 L622.0,20.3" fill="none" stroke="var(--c1)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<path d="M66.0,174.1 L71.6,173.6 L77.1,173.0 L82.7,172.4 L88.2,171.8 L93.8,171.3 L99.4,170.7 L104.9,170.1 L110.5,169.5 L116.0,168.9 L121.6,168.3 L127.2,167.7 L132.7,167.2 L138.3,166.6 L143.8,166.0 L149.4,165.4 L155.0,164.8 L160.5,164.2 L166.1,163.6 L171.6,163.0 L177.2,162.4 L182.8,161.8 L188.3,161.2 L193.9,160.6 L199.4,160.0 L205.0,159.4 L210.6,158.8 L216.1,158.1 L221.7,157.5 L227.2,156.9 L232.8,156.3 L238.4,155.7 L243.9,155.1 L249.5,154.5 L255.0,153.9 L260.6,153.3 L266.2,152.6 L271.7,152.0 L277.3,151.4 L282.8,150.8 L288.4,150.2 L294.0,149.6 L299.5,148.9 L305.1,148.3 L310.6,147.7 L316.2,147.1 L321.8,146.5 L327.3,145.9 L332.9,145.2 L338.4,144.6 L344.0,144.0 L349.6,143.4 L355.1,142.8 L360.7,142.1 L366.2,141.5 L371.8,140.9 L377.4,140.3 L382.9,139.7 L388.5,139.1 L394.0,138.4 L399.6,137.8 L405.2,137.2 L410.7,136.6 L416.3,136.0 L421.8,135.4 L427.4,134.7 L433.0,134.1 L438.5,133.5 L444.1,132.9 L449.6,132.3 L455.2,131.7 L460.8,131.1 L466.3,130.5 L471.9,129.9 L477.4,129.2 L483.0,128.6 L488.6,128.0 L494.1,127.4 L499.7,126.8 L505.2,126.2 L510.8,125.6 L516.4,125.0 L521.9,124.4 L527.5,123.8 L533.0,123.2 L538.6,122.6 L544.2,122.0 L549.7,121.4 L555.3,120.8 L560.8,120.3 L566.4,119.7 L572.0,119.1 L577.5,118.5 L583.1,117.9 L588.6,117.3 L594.2,116.7 L599.8,116.2 L605.3,115.6 L610.9,115.0 L616.4,114.4 L622.0,113.9" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,174.9 L71.6,174.3 L77.1,173.7 L82.7,173.1 L88.2,172.5 L93.8,171.8 L99.4,171.2 L104.9,170.6 L110.5,170.0 L116.0,169.4 L121.6,168.7 L127.2,168.1 L132.7,167.5 L138.3,166.9 L143.8,166.3 L149.4,165.6 L155.0,165.0 L160.5,164.4 L166.1,163.8 L171.6,163.2 L177.2,162.6 L182.8,161.9 L188.3,161.3 L193.9,160.7 L199.4,160.1 L205.0,159.5 L210.6,158.8 L216.1,158.2 L221.7,157.6 L227.2,157.0 L232.8,156.4 L238.4,155.8 L243.9,155.1 L249.5,154.5 L255.0,153.9 L260.6,153.3 L266.2,152.7 L271.7,152.0 L277.3,151.4 L282.8,150.8 L288.4,150.2 L294.0,149.6 L299.5,148.9 L305.1,148.3 L310.6,147.7 L316.2,147.1 L321.8,146.5 L327.3,145.9 L332.9,145.2 L338.4,144.6 L344.0,144.0 L349.6,143.4 L355.1,142.8 L360.7,142.1 L366.2,141.5 L371.8,140.9 L377.4,140.3 L382.9,139.7 L388.5,139.1 L394.0,138.4 L399.6,137.8 L405.2,137.2 L410.7,136.6 L416.3,136.0 L421.8,135.3 L427.4,134.7 L433.0,134.1 L438.5,133.5 L444.1,132.9 L449.6,132.2 L455.2,131.6 L460.8,131.0 L466.3,130.4 L471.9,129.8 L477.4,129.2 L483.0,128.5 L488.6,127.9 L494.1,127.3 L499.7,126.7 L505.2,126.1 L510.8,125.4 L516.4,124.8 L521.9,124.2 L527.5,123.6 L533.0,123.0 L538.6,122.4 L544.2,121.7 L549.7,121.1 L555.3,120.5 L560.8,119.9 L566.4,119.3 L572.0,118.6 L577.5,118.0 L583.1,117.4 L588.6,116.8 L594.2,116.2 L599.8,115.5 L605.3,114.9 L610.9,114.3 L616.4,113.7 L622.0,113.1" fill="none" stroke="var(--c2)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<line x1="84" y1="30" x2="104" y2="30" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="34" font-size="12" fill="var(--fg)">mã hóa sin², c = 1</text>
+<line x1="84" y1="48" x2="104" y2="48" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="5 4"/>
+<text x="110" y="52" font-size="12" fill="var(--fg)">đường thẳng mục tiêu, c = 1</text>
+<line x1="84" y1="66" x2="104" y2="66" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="70" font-size="12" fill="var(--fg)">mã hóa sin², c = 0.25</text>
+<line x1="84" y1="84" x2="104" y2="84" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="5 4"/>
+<text x="110" y="88" font-size="12" fill="var(--fg)">đường thẳng mục tiêu, c = 0.25</text>
+</svg></div>
+    <figcaption><b>Hình 6.</b> Xác suất được mã hóa (nét liền) so với đường thẳng mục tiêu (nét đứt). Với c = 1, hàm sin cong rõ ở hai đầu; với c = 0.25 gần như khớp hoàn toàn nhưng chỉ dùng một phần tư khoảng [0, 1].</figcaption>
+  </figure>
+</section>
+
+<!-- 7 -->
+<section id="vi-s7">
+  <h2><span class="n">7</span>Mạch Heston lượng tử</h2>
+  <p class="prose">Khóa luận xấp xỉ đường Heston bằng hai bước giá và một lần rút phương sai. Bảy qubit được chia thành ba thanh ghi:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Thanh ghi</th><th>Qubit</th><th class="num">Số điểm</th><th>Phân phối được nạp (theo khóa luận)</th></tr></thead>
+    <tbody>
+      <tr><td>\(v\)</td><td>q0, q3</td><td class="num">4</td><td>\(\mathcal{N}(\mu_v,\sigma_v^2)\), \(\mu_v = v_0 + \kappa(\theta - v_0)T\), \(\sigma_v = \sigma\sqrt{v_0T}\)</td></tr>
+      <tr><td>\(S_1\)</td><td>q1, q4</td><td class="num">4</td><td>log-normal, \(\mu = \ln S_0 + (r - \tfrac12 v_0^2)T\), \(\sigma = v_0\sqrt{T}\)</td></tr>
+      <tr><td>\(S_2\)</td><td>q2, q5, q6</td><td class="num">8</td><td>log-normal theo \((S_1, V_1)\): \(\mu = \ln S_1 + (r - \tfrac12V_1^2)\Delta t\), \(\sigma = V_1\sqrt{\Delta t}\)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Mỗi lưới được cắt tại kỳ vọng \(\pm 3\) độ lệch chuẩn (cận dưới không nhỏ hơn 0), và cận giá được nới khi cần để \(K\) nằm trong \([\ell_S, h_S]\).</p>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 700 340" width="100%" style="min-width:600px;max-width:700px" role="img" aria-label="quantum circuit">
+        <g font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--fg)">
+          <text x="14" y="44">q₀</text><text x="14" y="84">q₁</text><text x="14" y="124">q₂</text><text x="14" y="164">q₃</text><text x="14" y="204">q₄</text><text x="14" y="244">q₅</text><text x="14" y="284">q₆</text>
+        </g>
+        <g stroke="var(--muted)">
+          <line x1="40" y1="40" x2="560" y2="40"/><line x1="40" y1="80" x2="560" y2="80"/><line x1="40" y1="120" x2="560" y2="120"/><line x1="40" y1="160" x2="560" y2="160"/><line x1="40" y1="200" x2="560" y2="200"/><line x1="40" y1="240" x2="560" y2="240"/><line x1="40" y1="280" x2="560" y2="280"/>
+        </g>
+        <g font-size="13" font-weight="600">
+          <rect x="56" y="26" width="30" height="268" rx="3" fill="var(--panel)" stroke="var(--fg)"/>
+          <text x="71" y="164" text-anchor="middle" fill="var(--fg)">H</text>
+          <rect x="112" y="26" width="72" height="148" rx="3" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="148" y="98" text-anchor="middle" fill="var(--c1)">𝒫_v</text>
+          <text x="118" y="44" font-size="10" fill="var(--muted)">0</text><text x="118" y="164" font-size="10" fill="var(--muted)">1</text>
+          <rect x="208" y="66" width="72" height="148" rx="3" fill="var(--soft)" stroke="var(--c4)"/>
+          <text x="244" y="138" text-anchor="middle" fill="var(--c4)">𝒫_S₁</text>
+          <text x="214" y="84" font-size="10" fill="var(--muted)">0</text><text x="214" y="204" font-size="10" fill="var(--muted)">1</text>
+          <rect x="304" y="106" width="72" height="188" rx="3" fill="var(--soft)" stroke="var(--c2)"/>
+          <text x="340" y="198" text-anchor="middle" fill="var(--c2)">𝒫_S₂</text>
+          <text x="310" y="124" font-size="10" fill="var(--muted)">0</text><text x="310" y="244" font-size="10" fill="var(--muted)">1</text><text x="310" y="284" font-size="10" fill="var(--muted)">2</text>
+          <rect x="420" y="26" width="72" height="268" rx="3" fill="var(--panel)" stroke="var(--c3)"/>
+          <text x="456" y="164" text-anchor="middle" fill="var(--c3)">F</text>
+        </g>
+        <g fill="var(--c3)"><circle cx="420" cy="40" r="3"/><circle cx="420" cy="80" r="3"/><circle cx="420" cy="120" r="3"/><circle cx="420" cy="240" r="3"/><circle cx="420" cy="280" r="3"/></g>
+        <g font-size="12" fill="var(--muted)">
+          <text x="572" y="44">bit 0 của v</text>
+          <text x="572" y="84">bit 0 của S₁</text>
+          <text x="572" y="124">bit 0 của S₂</text>
+          <text x="572" y="164">bit 1 của v</text>
+          <text x="572" y="204">bit 1 của S₁</text>
+          <text x="572" y="244">bit 1 của S₂</text>
+          <text x="572" y="284">bit 2 của S₂</text>
+        </g>
+        <text x="40" y="314" font-size="12" fill="var(--muted)">Chấm đỏ đánh dấu các dây F đọc: q0, q1, q2, q5, q6 (theo Hình 8.2 của khóa luận).</text><text x="40" y="330" font-size="12" fill="var(--muted)">Qubit mục tiêu và tầng QAE 𝒬ᵏ tác động sau F.</text>
+      </svg>
+    </div>
+    <figcaption><b>Hình 7.</b> Mạch định giá, vẽ lại từ khóa luận. Các thanh ghi xen kẽ trên dây: v trên (q0, q3), S₁ trên (q1, q4), S₂ trên (q2, q5, q6). 𝒫 và F hợp lại thành toán tử chuẩn bị trạng thái 𝒜 mà QAE khuếch đại.</figcaption>
+  </figure>
+  <p class="prose">Viết gọn thành một toán tử, trạng thái được chuẩn bị trước bước ước lượng biên độ là</p>
+  <div class="eq">\[ \mathcal{A}|0\rangle = \sum_{a,b,c}\sqrt{p^v_a\,p^{S_1}_b\,p^{S_2}_c}\;|a\rangle_v|b\rangle_{S_1}|c\rangle_{S_2}\Big(\sqrt{1-\tilde f_c}\,|0\rangle + \sqrt{\tilde f_c}\,|1\rangle\Big), \]</div>
+  <p class="prose">trong đó \(\tilde f_c = \sin^2(\tfrac\pi4 + \delta_c)\) là payoff đã mã hóa. QAE ước lượng \(\sum p_c^{S_2}\tilde f_c\), rồi giá được khôi phục bằng phép co giãn ở Mục 6.4.</p>
+</section>
+
+<!-- 8 -->
+<section id="vi-s8">
+  <h2><span class="n">8</span>Dữ liệu và kết quả calibrate</h2>
+  <p class="prose">Dữ liệu chuỗi call SPX cuối ngày từ optionsDX, 01–30/12/2023. Bước làm sạch loại bỏ báo giá có chênh lệch bid–ask bằng 0, số ngày đến đáo hạn bằng 0, khối lượng bằng 0, hoặc đáo hạn quá 252 ngày. Strike được giữ trong phạm vi một độ lệch chuẩn quanh giá spot, và chỉ giữ các nhóm (ngày, kỳ hạn) có hơn 120 quyền chọn. Bộ lọc cuối loại các giá mid lệch hơn một độ lệch chuẩn so với trung bình ngày. Kết quả là <b>18.828</b> báo giá trong <b>184</b> lát.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Ngày quote</th><th>Đáo hạn</th><th class="num">ρ</th><th class="num">σ</th><th class="num">θ</th><th class="num">κ</th><th class="num">v₀</th></tr></thead>
+    <tbody>
+      <tr><td>2023-12-01</td><td>2023-12-08</td><td class="num">−0.134</td><td class="num">0.461</td><td class="num">0.0400</td><td class="num">13.77</td><td class="num">8.2e−5</td></tr>
+      <tr><td>2023-12-01</td><td>2023-12-15</td><td class="num">−0.244</td><td class="num">0.604</td><td class="num">0.0421</td><td class="num">7.73</td><td class="num">8.0e−5</td></tr>
+      <tr><td>2023-12-01</td><td>2023-12-29</td><td class="num">−0.359</td><td class="num">0.428</td><td class="num">0.0225</td><td class="num">7.86</td><td class="num">1.6e−4</td></tr>
+      <tr><td>2023-12-01</td><td>2024-01-19</td><td class="num">−0.430</td><td class="num">0.408</td><td class="num">0.0203</td><td class="num">5.55</td><td class="num">3.0e−4</td></tr>
+      <tr><td>2023-12-01</td><td>2024-01-31</td><td class="num">−0.446</td><td class="num">0.397</td><td class="num">0.0227</td><td class="num">4.29</td><td class="num">1.6e−7</td></tr>
+      <tr><td>2023-12-29</td><td>2024-01-31</td><td class="num">−0.437</td><td class="num">0.520</td><td class="num">0.0209</td><td class="num">7.98</td><td class="num">7.7e−5</td></tr>
+      <tr><td>2023-12-29</td><td>2024-02-16</td><td class="num">−0.481</td><td class="num">0.548</td><td class="num">0.0171</td><td class="num">8.47</td><td class="num">2.4e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-02-29</td><td class="num">−0.477</td><td class="num">0.576</td><td class="num">0.0156</td><td class="num">8.18</td><td class="num">3.9e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-03-15</td><td class="num">−0.482</td><td class="num">0.582</td><td class="num">0.0145</td><td class="num">8.17</td><td class="num">4.9e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-03-28</td><td class="num">−0.519</td><td class="num">0.427</td><td class="num">0.0213</td><td class="num">3.73</td><td class="num">3.8e−6</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Bảng 1. Năm lát đầu và năm lát cuối trong 184 lát đã calibrate (Hình 8.1 của khóa luận).</p>
+  <div class="pair">
+    <figure><div class="plate"><svg viewBox="0 0 420 280" width="100%" style="max-width:420px" role="img" aria-label="rho term structure">
+<line x1="66" y1="230.0" x2="402" y2="230.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="234.0" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.6</text>
+<line x1="66" y1="159.3" x2="402" y2="159.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="163.3" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.4</text>
+<line x1="66" y1="88.7" x2="402" y2="88.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="92.7" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.2</text>
+<line x1="66" y1="18.0" x2="402" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66.0" y1="230" x2="66.0" y2="235" stroke="var(--muted)"/>
+<text x="66.0" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="172.1" y1="230" x2="172.1" y2="235" stroke="var(--muted)"/>
+<text x="172.1" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">30</text>
+<line x1="278.2" y1="230" x2="278.2" y2="235" stroke="var(--muted)"/>
+<text x="278.2" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">60</text>
+<line x1="384.3" y1="230" x2="384.3" y2="235" stroke="var(--muted)"/>
+<text x="384.3" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">90</text>
+<line x1="66" y1="230" x2="402" y2="230" stroke="var(--muted)"/>
+<text x="234" y="272" text-anchor="middle" font-size="12.5" fill="var(--fg)">Số ngày đến đáo hạn</text>
+<text transform="translate(14,124) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">ρ</text>
+<path d="M90.8,65.4 L115.5,104.1 L165.0,145.0 L239.3,169.8 L281.7,175.6" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="90.8" cy="65.4" r="3.5" fill="var(--c1)"/>
+<circle cx="115.5" cy="104.1" r="3.5" fill="var(--c1)"/>
+<circle cx="165.0" cy="145.0" r="3.5" fill="var(--c1)"/>
+<circle cx="239.3" cy="169.8" r="3.5" fill="var(--c1)"/>
+<circle cx="281.7" cy="175.6" r="3.5" fill="var(--c1)"/>
+<path d="M182.7,172.5 L239.3,188.1 L285.3,186.7 L338.3,188.2 L384.3,201.5" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="182.7" cy="172.5" r="3.5" fill="var(--c2)"/>
+<circle cx="239.3" cy="188.1" r="3.5" fill="var(--c2)"/>
+<circle cx="285.3" cy="186.7" r="3.5" fill="var(--c2)"/>
+<circle cx="338.3" cy="188.2" r="3.5" fill="var(--c2)"/>
+<circle cx="384.3" cy="201.5" r="3.5" fill="var(--c2)"/>
+<line x1="150" y1="34" x2="170" y2="34" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="176" y="38" font-size="12" fill="var(--fg)">Ngày quote 01/12/2023</text>
+<line x1="150" y1="52" x2="170" y2="52" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="176" y="56" font-size="12" fill="var(--fg)">Ngày quote 29/12/2023</text>
+</svg></div></figure>
+    <figure><div class="plate"><svg viewBox="0 0 420 280" width="100%" style="max-width:420px" role="img" aria-label="long run vol">
+<line x1="66" y1="230.0" x2="402" y2="230.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="234.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10</text>
+<line x1="66" y1="159.3" x2="402" y2="159.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="163.3" text-anchor="end" font-size="11.5" fill="var(--muted)">14</text>
+<line x1="66" y1="88.7" x2="402" y2="88.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="92.7" text-anchor="end" font-size="11.5" fill="var(--muted)">18</text>
+<line x1="66" y1="18.0" x2="402" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">22</text>
+<line x1="66.0" y1="230" x2="66.0" y2="235" stroke="var(--muted)"/>
+<text x="66.0" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="172.1" y1="230" x2="172.1" y2="235" stroke="var(--muted)"/>
+<text x="172.1" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">30</text>
+<line x1="278.2" y1="230" x2="278.2" y2="235" stroke="var(--muted)"/>
+<text x="278.2" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">60</text>
+<line x1="384.3" y1="230" x2="384.3" y2="235" stroke="var(--muted)"/>
+<text x="384.3" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">90</text>
+<line x1="66" y1="230" x2="402" y2="230" stroke="var(--muted)"/>
+<text x="234" y="272" text-anchor="middle" font-size="12.5" fill="var(--fg)">Số ngày đến đáo hạn</text>
+<text transform="translate(14,124) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">√θ (%)</text>
+<path d="M90.8,53.4 L115.5,44.0 L165.0,142.0 L239.3,154.8 L281.7,140.7" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="90.8" cy="53.4" r="3.5" fill="var(--c1)"/>
+<circle cx="115.5" cy="44.0" r="3.5" fill="var(--c1)"/>
+<circle cx="165.0" cy="142.0" r="3.5" fill="var(--c1)"/>
+<circle cx="239.3" cy="154.8" r="3.5" fill="var(--c1)"/>
+<circle cx="281.7" cy="140.7" r="3.5" fill="var(--c1)"/>
+<path d="M182.7,151.1 L239.3,175.4 L285.3,186.1 L338.3,193.7 L384.3,149.0" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="182.7" cy="151.1" r="3.5" fill="var(--c2)"/>
+<circle cx="239.3" cy="175.4" r="3.5" fill="var(--c2)"/>
+<circle cx="285.3" cy="186.1" r="3.5" fill="var(--c2)"/>
+<circle cx="338.3" cy="193.7" r="3.5" fill="var(--c2)"/>
+<circle cx="384.3" cy="149.0" r="3.5" fill="var(--c2)"/>
+</svg></div></figure>
+  </div>
+  <figcaption><b>Hình 8.</b> Cấu trúc kỳ hạn của tương quan ρ (trái) và volatility dài hạn √θ (phải) đã calibrate, lấy từ Bảng 1.</figcaption>
+  <div class="def amber"><span class="t">Đọc các tham số</span>
+    <ul class="prose">
+      <li><b>ρ luôn âm và lớn dần theo kỳ hạn</b>, từ −0.13 ở một tuần đến khoảng −0.5 ở ba tháng. Đây là hiệu ứng đòn bẩy: giá giảm đi kèm volatility tăng, tạo ra skew dốc xuống của SPX.</li>
+      <li><b>√θ nằm trong khoảng 12–20%</b>, hợp lý cho volatility dài hạn của SPX cuối 2023. Nó giảm dần trong tháng khi thị trường tăng vào cuối năm.</li>
+      <li><b>v₀ rất nhỏ</b> (0,0000002 đến 0,0003, tức vol spot 0,04–1,7%), trong khi κ lớn (4–14). Hồi quy nhanh khiến v₀ gần như không xác định được: bộ tối ưu có thể đẩy nó về gần 0 mà gần như không tốn gì. Điều này quan trọng với phần lượng tử, vì phần đó dựng phân phối giá từ v₀ (Mục 10).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="vi-s9">
+  <h2><span class="n">9</span>Kết quả</h2>
+  <p class="prose">Giá lượng tử được so với giá mid thị trường trên toàn bộ mẫu đã làm sạch bằng</p>
+  <div class="eq">\[ \mathrm{MAE} = \frac1n\sum_{i=1}^n|y_i - \hat y_i|, \qquad \mathrm{RMSE} = \sqrt{\frac1n\sum_{i=1}^n(y_i-\hat y_i)^2}. \]</div>
+  <div class="stats" style="max-width:520px">
+    <div class="stat"><span class="v">20.23</span><span class="l">MAE (điểm chỉ số)</span></div>
+    <div class="stat"><span class="v">29.03</span><span class="l">RMSE (điểm chỉ số)</span></div>
+    <div class="stat"><span class="v">1.43</span><span class="l">RMSE / MAE</span></div>
+  </div>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p><b>Cách đọc các con số.</b> SPX giao dịch quanh 4.550–4.780 điểm trong tháng 12/2023, nên một call ATM kỳ hạn một đến ba tháng có giá khoảng 60–150 điểm. Sai số tuyệt đối trung bình 20 điểm vì vậy là lớn: khoảng 15–30% phí của một call ATM điển hình. Tỷ số RMSE/MAE = 1,43 gần giá trị \(\sqrt{\pi/2}\approx1,25\) của sai số chuẩn, cao hơn một chút. Tức là sai số khá đều trên toàn mẫu với đuôi hơi dày, chứ không do vài điểm ngoại lai cực đoan.</p>
+    <p><b>Khóa luận quy sai số cho.</b> (1) Chỉ có hai bước Euler do giới hạn qubit. (2) Cắt mỗi phân phối còn vài điểm lưới với cận \(\pm3\sigma\), cộng sai số chuẩn bị trạng thái. (3) Tham số được chọn từ một tập định sẵn nhỏ. (4) Giới hạn của API Qiskit với mạch lớn hơn.</p>
+    <p>Mục tiếp theo đi sâu thêm một tầng và dùng đại số để chỉ ra nguồn nào chiếm ưu thế.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="vi-s10">
+  <h2><span class="n">10</span>Đánh giá kỹ thuật: sai số đến từ đâu</h2>
+  <p class="prose">Mục này đối chiếu tham số phân phối trong mạch với các moment chính xác của mô hình Heston. Mỗi điểm được nêu thành một nhận định kiểm chứng được, kèm cách sửa đề xuất.</p>
+
+  <div class="review">
+    <div class="ri"><span class="k">R1</span><div>
+      <h3>Độ phân tán giá được dựng từ v₀ như thể nó là volatility<span class="sev h">cao</span></h3>
+      <p class="prose">Trong Heston, \(v\) là <i>phương sai</i>. Phân phối log-normal của \(S\) dùng \(\sigma = v_0\sqrt{T}\) và drift \(r - \tfrac12v_0^2\), tức coi \(v_0\) như volatility. Lựa chọn đúng thứ nguyên là \(\sqrt{v_0T}\). Tốt hơn nữa, trên một khoảng thời gian thì đại lượng cần dùng là phương sai <i>tích phân</i>, vì \(v\) hồi quy về \(\theta\) rất nhanh:</p>
+      <div class="eq">\[ \Sigma^2(T) = \theta T + (v_0-\theta)\frac{1-e^{-\kappa T}}{\kappa}, \qquad \ln S_T \approx \mathcal{N}\big(\ln S_0 + rT - \tfrac12\Sigma^2,\ \Sigma^2\big). \]</div>
+      <p class="prose">Với lát đáo hạn 31/01/2024 (\(v_0 = 1.6\times10^{-7}\), \(T = 61\) ngày), công thức trong khóa luận cho \(\sigma \approx 7\times10^{-8}\). Phương sai tích phân cho \(\Sigma \approx 3.3\%\), tức 8,1% theo năm. Với công thức đầu, thanh ghi giá co lại về đúng giá forward, và call ATM bị định giá bằng giá trị nội tại theo forward, khoảng 33 điểm. Với công thức sau, cùng call đó đáng giá khoảng 78 điểm. Chênh 45 điểm trên một hợp đồng cùng bậc với MAE được báo cáo.</p>
+    </div></div>
+    <figure>
+      <div class="plate"><svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="terminal price density">
+<line x1="66" y1="250.0" x2="622" y2="250.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="254.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66" y1="172.7" x2="622" y2="172.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="176.7" text-anchor="end" font-size="11.5" fill="var(--muted)">1.0</text>
+<line x1="66" y1="95.3" x2="622" y2="95.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="99.3" text-anchor="end" font-size="11.5" fill="var(--muted)">2.0</text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">3.0</text>
+<line x1="116.5" y1="250" x2="116.5" y2="255" stroke="var(--muted)"/>
+<text x="116.5" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,200</text>
+<line x1="217.6" y1="250" x2="217.6" y2="255" stroke="var(--muted)"/>
+<text x="217.6" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,400</text>
+<line x1="318.7" y1="250" x2="318.7" y2="255" stroke="var(--muted)"/>
+<text x="318.7" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,600</text>
+<line x1="419.8" y1="250" x2="419.8" y2="255" stroke="var(--muted)"/>
+<text x="419.8" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,800</text>
+<line x1="520.9" y1="250" x2="520.9" y2="255" stroke="var(--muted)"/>
+<text x="520.9" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">5,000</text>
+<line x1="622.0" y1="250" x2="622.0" y2="255" stroke="var(--muted)"/>
+<text x="622.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">5,200</text>
+<line x1="66" y1="250" x2="622" y2="250" stroke="var(--muted)"/>
+<text x="344" y="292" text-anchor="middle" font-size="12.5" fill="var(--fg)">S_T (điểm chỉ số)</text>
+<text transform="translate(14,134) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">mật độ × 10³</text>
+<line x1="318.7" y1="250.0" x2="318.7" y2="18.0" stroke="var(--muted)" stroke-dasharray="4 4"/><text x="312.7" y="29.6" text-anchor="end" font-size="11.5" fill="var(--muted)">K = 4,600</text><line x1="335.5" y1="250.0" x2="335.5" y2="24.0" stroke="var(--c3)" stroke-width="3"/><path d="M330.5,28.0 L335.5,19.0 L340.5,28.0" fill="var(--c3)"/><text x="440.0" y="56.7" font-size="11.5" fill="var(--c3)">σ = v₀√T ≈ 7·10⁻⁸ (luận văn):</text><text x="440.0" y="72.7" font-size="11.5" fill="var(--c3)">dồn hết vào F ≈ 4,633</text>
+<path d="M66.0,249.8 L67.4,249.7 L68.8,249.7 L70.2,249.7 L71.6,249.7 L73.0,249.6 L74.4,249.6 L75.8,249.6 L77.1,249.6 L78.5,249.5 L79.9,249.5 L81.3,249.5 L82.7,249.4 L84.1,249.4 L85.5,249.3 L86.9,249.3 L88.3,249.2 L89.7,249.2 L91.1,249.1 L92.5,249.1 L93.9,249.0 L95.3,248.9 L96.7,248.9 L98.1,248.8 L99.4,248.7 L100.8,248.6 L102.2,248.5 L103.6,248.4 L105.0,248.3 L106.4,248.2 L107.8,248.1 L109.2,248.0 L110.6,247.9 L112.0,247.7 L113.4,247.6 L114.8,247.4 L116.2,247.3 L117.6,247.1 L119.0,247.0 L120.3,246.8 L121.7,246.6 L123.1,246.4 L124.5,246.2 L125.9,246.0 L127.3,245.7 L128.7,245.5 L130.1,245.2 L131.5,245.0 L132.9,244.7 L134.3,244.4 L135.7,244.1 L137.1,243.8 L138.5,243.5 L139.9,243.1 L141.2,242.8 L142.6,242.4 L144.0,242.0 L145.4,241.6 L146.8,241.1 L148.2,240.7 L149.6,240.2 L151.0,239.8 L152.4,239.3 L153.8,238.7 L155.2,238.2 L156.6,237.6 L158.0,237.1 L159.4,236.4 L160.8,235.8 L162.2,235.2 L163.5,234.5 L164.9,233.8 L166.3,233.1 L167.7,232.3 L169.1,231.6 L170.5,230.8 L171.9,229.9 L173.3,229.1 L174.7,228.2 L176.1,227.3 L177.5,226.4 L178.9,225.4 L180.3,224.4 L181.7,223.4 L183.1,222.3 L184.4,221.2 L185.8,220.1 L187.2,219.0 L188.6,217.8 L190.0,216.6 L191.4,215.4 L192.8,214.1 L194.2,212.8 L195.6,211.5 L197.0,210.1 L198.4,208.7 L199.8,207.3 L201.2,205.8 L202.6,204.3 L204.0,202.8 L205.3,201.2 L206.7,199.6 L208.1,198.0 L209.5,196.4 L210.9,194.7 L212.3,193.0 L213.7,191.2 L215.1,189.4 L216.5,187.6 L217.9,185.8 L219.3,183.9 L220.7,182.0 L222.1,180.1 L223.5,178.2 L224.9,176.2 L226.3,174.2 L227.6,172.2 L229.0,170.1 L230.4,168.0 L231.8,165.9 L233.2,163.8 L234.6,161.7 L236.0,159.5 L237.4,157.3 L238.8,155.2 L240.2,152.9 L241.6,150.7 L243.0,148.5 L244.4,146.2 L245.8,144.0 L247.2,141.7 L248.5,139.4 L249.9,137.1 L251.3,134.8 L252.7,132.5 L254.1,130.2 L255.5,128.0 L256.9,125.7 L258.3,123.4 L259.7,121.1 L261.1,118.8 L262.5,116.5 L263.9,114.2 L265.3,112.0 L266.7,109.7 L268.1,107.5 L269.4,105.3 L270.8,103.1 L272.2,100.9 L273.6,98.8 L275.0,96.6 L276.4,94.5 L277.8,92.4 L279.2,90.4 L280.6,88.4 L282.0,86.4 L283.4,84.4 L284.8,82.5 L286.2,80.6 L287.6,78.8 L289.0,76.9 L290.4,75.2 L291.7,73.5 L293.1,71.8 L294.5,70.1 L295.9,68.6 L297.3,67.0 L298.7,65.5 L300.1,64.1 L301.5,62.7 L302.9,61.4 L304.3,60.1 L305.7,58.9 L307.1,57.7 L308.5,56.6 L309.9,55.6 L311.3,54.6 L312.6,53.7 L314.0,52.8 L315.4,52.0 L316.8,51.3 L318.2,50.6 L319.6,50.0 L321.0,49.5 L322.4,49.0 L323.8,48.6 L325.2,48.2 L326.6,48.0 L328.0,47.8 L329.4,47.6 L330.8,47.5 L332.2,47.5 L333.5,47.6 L334.9,47.7 L336.3,47.9 L337.7,48.1 L339.1,48.5 L340.5,48.8 L341.9,49.3 L343.3,49.8 L344.7,50.4 L346.1,51.0 L347.5,51.7 L348.9,52.5 L350.3,53.3 L351.7,54.2 L353.1,55.1 L354.5,56.1 L355.8,57.2 L357.2,58.3 L358.6,59.4 L360.0,60.6 L361.4,61.9 L362.8,63.2 L364.2,64.6 L365.6,66.0 L367.0,67.4 L368.4,68.9 L369.8,70.5 L371.2,72.1 L372.6,73.7 L374.0,75.4 L375.4,77.1 L376.7,78.8 L378.1,80.6 L379.5,82.4 L380.9,84.3 L382.3,86.2 L383.7,88.1 L385.1,90.0 L386.5,91.9 L387.9,93.9 L389.3,95.9 L390.7,97.9 L392.1,100.0 L393.5,102.0 L394.9,104.1 L396.3,106.2 L397.6,108.3 L399.0,110.4 L400.4,112.5 L401.8,114.7 L403.2,116.8 L404.6,119.0 L406.0,121.1 L407.4,123.3 L408.8,125.4 L410.2,127.6 L411.6,129.7 L413.0,131.9 L414.4,134.0 L415.8,136.1 L417.2,138.3 L418.6,140.4 L419.9,142.5 L421.3,144.6 L422.7,146.7 L424.1,148.8 L425.5,150.9 L426.9,152.9 L428.3,155.0 L429.7,157.0 L431.1,159.0 L432.5,161.0 L433.9,162.9 L435.3,164.9 L436.7,166.8 L438.1,168.7 L439.5,170.6 L440.8,172.5 L442.2,174.3 L443.6,176.2 L445.0,178.0 L446.4,179.7 L447.8,181.5 L449.2,183.2 L450.6,184.9 L452.0,186.6 L453.4,188.3 L454.8,189.9 L456.2,191.5 L457.6,193.0 L459.0,194.6 L460.4,196.1 L461.7,197.6 L463.1,199.1 L464.5,200.5 L465.9,201.9 L467.3,203.3 L468.7,204.6 L470.1,206.0 L471.5,207.3 L472.9,208.6 L474.3,209.8 L475.7,211.0 L477.1,212.2 L478.5,213.4 L479.9,214.5 L481.3,215.6 L482.7,216.7 L484.0,217.8 L485.4,218.8 L486.8,219.8 L488.2,220.8 L489.6,221.8 L491.0,222.7 L492.4,223.6 L493.8,224.5 L495.2,225.4 L496.6,226.2 L498.0,227.1 L499.4,227.9 L500.8,228.6 L502.2,229.4 L503.6,230.1 L504.9,230.8 L506.3,231.5 L507.7,232.2 L509.1,232.8 L510.5,233.5 L511.9,234.1 L513.3,234.7 L514.7,235.3 L516.1,235.8 L517.5,236.4 L518.9,236.9 L520.3,237.4 L521.7,237.9 L523.1,238.3 L524.5,238.8 L525.8,239.2 L527.2,239.7 L528.6,240.1 L530.0,240.5 L531.4,240.9 L532.8,241.2 L534.2,241.6 L535.6,242.0 L537.0,242.3 L538.4,242.6 L539.8,242.9 L541.2,243.2 L542.6,243.5 L544.0,243.8 L545.4,244.1 L546.8,244.3 L548.1,244.6 L549.5,244.8 L550.9,245.0 L552.3,245.2 L553.7,245.5 L555.1,245.7 L556.5,245.9 L557.9,246.0 L559.3,246.2 L560.7,246.4 L562.1,246.6 L563.5,246.7 L564.9,246.9 L566.3,247.0 L567.7,247.2 L569.0,247.3 L570.4,247.4 L571.8,247.5 L573.2,247.7 L574.6,247.8 L576.0,247.9 L577.4,248.0 L578.8,248.1 L580.2,248.2 L581.6,248.3 L583.0,248.3 L584.4,248.4 L585.8,248.5 L587.2,248.6 L588.6,248.7 L589.9,248.7 L591.3,248.8 L592.7,248.8 L594.1,248.9 L595.5,249.0 L596.9,249.0 L598.3,249.1 L599.7,249.1 L601.1,249.2 L602.5,249.2 L603.9,249.2 L605.3,249.3 L606.7,249.3 L608.1,249.4 L609.5,249.4 L610.9,249.4 L612.2,249.5 L613.6,249.5 L615.0,249.5 L616.4,249.5 L617.8,249.6 L619.2,249.6 L620.6,249.6 L622.0,249.6" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<line x1="84" y1="28" x2="104" y2="28" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="32" font-size="12" fill="var(--fg)">σ² = ∫v dt (phương sai tích phân)</text>
+</svg></div>
+      <figcaption><b>Hình 9.</b> Phân phối giá cuối kỳ cho lát 31/01/2024. Tham số hóa trong khóa luận (vạch đỏ) so với log-normal dùng phương sai tích phân (xanh). Giá trị thời gian của quyền chọn nằm ở phần xanh bên phải K, phần mà vạch đỏ bỏ mất. Tính minh họa với r = 5%.</figcaption>
+    </figure>
+
+    <div class="ri"><span class="k">R2</span><div>
+      <h3>Một bước Euler vượt quá kỳ vọng phương sai<span class="sev m">trung bình</span></h3>
+      <p class="prose">\(\mu_v = v_0 + \kappa(\theta-v_0)T\) là khai triển bậc một của kỳ vọng chính xác \(\theta + (v_0-\theta)e^{-\kappa T}\). Sai số tương đối khoảng \(\tfrac12\kappa T\). Với \(\kappa\approx 4\)–\(14\), \(\kappa T\) vượt 1 chỉ sau vài tuần, và kỳ vọng tuyến tính thậm chí vượt qua \(\theta\), tức vượt quá mức mà phương sai thực sự hồi quy về.</p>
+    </div></div>
+    <figure>
+      <div class="plate"><svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="expected variance">
+<line x1="66" y1="250.0" x2="622" y2="250.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="254.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.00</text>
+<line x1="66" y1="183.7" x2="622" y2="183.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="187.7" text-anchor="end" font-size="11.5" fill="var(--muted)">0.01</text>
+<line x1="66" y1="117.4" x2="622" y2="117.4" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="121.4" text-anchor="end" font-size="11.5" fill="var(--muted)">0.02</text>
+<line x1="66" y1="51.1" x2="622" y2="51.1" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="55.1" text-anchor="end" font-size="11.5" fill="var(--muted)">0.03</text>
+<line x1="66.0" y1="250" x2="66.0" y2="255" stroke="var(--muted)"/>
+<text x="66.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.00</text>
+<line x1="145.4" y1="250" x2="145.4" y2="255" stroke="var(--muted)"/>
+<text x="145.4" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.05</text>
+<line x1="224.9" y1="250" x2="224.9" y2="255" stroke="var(--muted)"/>
+<text x="224.9" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.10</text>
+<line x1="304.3" y1="250" x2="304.3" y2="255" stroke="var(--muted)"/>
+<text x="304.3" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.15</text>
+<line x1="383.7" y1="250" x2="383.7" y2="255" stroke="var(--muted)"/>
+<text x="383.7" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.20</text>
+<line x1="463.1" y1="250" x2="463.1" y2="255" stroke="var(--muted)"/>
+<text x="463.1" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="542.6" y1="250" x2="542.6" y2="255" stroke="var(--muted)"/>
+<text x="542.6" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.30</text>
+<line x1="622.0" y1="250" x2="622.0" y2="255" stroke="var(--muted)"/>
+<text x="622.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.35</text>
+<line x1="66" y1="250" x2="622" y2="250" stroke="var(--muted)"/>
+<text x="344" y="292" text-anchor="middle" font-size="12.5" fill="var(--fg)">Kỳ hạn T (năm)</text>
+<text transform="translate(14,134) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">phương sai</text>
+<line x1="436.5" y1="250.0" x2="436.5" y2="18.0" stroke="var(--c2)" stroke-dasharray="4 4"/><text x="442.5" y="223.5" font-size="11.5" fill="var(--c2)">κT = 1</text>
+<path d="M66.0,250.0 L73.9,246.8 L81.9,243.7 L89.8,240.6 L97.8,237.6 L105.7,234.7 L113.7,231.9 L121.6,229.1 L129.5,226.3 L137.5,223.6 L145.4,221.0 L153.4,218.4 L161.3,215.9 L169.3,213.4 L177.2,211.0 L185.1,208.7 L193.1,206.4 L201.0,204.1 L209.0,201.9 L216.9,199.7 L224.9,197.6 L232.8,195.5 L240.7,193.5 L248.7,191.5 L256.6,189.6 L264.6,187.7 L272.5,185.8 L280.5,184.0 L288.4,182.2 L296.3,180.4 L304.3,178.7 L312.2,177.0 L320.2,175.4 L328.1,173.8 L336.1,172.2 L344.0,170.7 L351.9,169.2 L359.9,167.7 L367.8,166.3 L375.8,164.9 L383.7,163.5 L391.7,162.1 L399.6,160.8 L407.5,159.5 L415.5,158.2 L423.4,157.0 L431.4,155.8 L439.3,154.6 L447.3,153.4 L455.2,152.3 L463.1,151.2 L471.1,150.1 L479.0,149.0 L487.0,148.0 L494.9,146.9 L502.9,145.9 L510.8,145.0 L518.7,144.0 L526.7,143.1 L534.6,142.1 L542.6,141.2 L550.5,140.4 L558.5,139.5 L566.4,138.7 L574.3,137.8 L582.3,137.0 L590.2,136.2 L598.2,135.5 L606.1,134.7 L614.1,134.0 L622.0,133.2" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,250.0 L73.9,246.8 L81.9,243.6 L89.8,240.3 L97.8,237.1 L105.7,233.9 L113.7,230.7 L121.6,227.4 L129.5,224.2 L137.5,221.0 L145.4,217.8 L153.4,214.6 L161.3,211.3 L169.3,208.1 L177.2,204.9 L185.1,201.7 L193.1,198.5 L201.0,195.2 L209.0,192.0 L216.9,188.8 L224.9,185.6 L232.8,182.3 L240.7,179.1 L248.7,175.9 L256.6,172.7 L264.6,169.5 L272.5,166.2 L280.5,163.0 L288.4,159.8 L296.3,156.6 L304.3,153.3 L312.2,150.1 L320.2,146.9 L328.1,143.7 L336.1,140.5 L344.0,137.2 L351.9,134.0 L359.9,130.8 L367.8,127.6 L375.8,124.4 L383.7,121.1 L391.7,117.9 L399.6,114.7 L407.5,111.5 L415.5,108.2 L423.4,105.0 L431.4,101.8 L439.3,98.6 L447.3,95.4 L455.2,92.1 L463.1,88.9 L471.1,85.7 L479.0,82.5 L487.0,79.3 L494.9,76.0 L502.9,72.8 L510.8,69.6 L518.7,66.4 L526.7,63.1 L534.6,59.9 L542.6,56.7 L550.5,53.5 L558.5,50.3 L566.4,47.0 L574.3,43.8 L582.3,40.6 L590.2,37.4 L598.2,34.1 L606.1,30.9 L614.1,27.7 L622.0,24.5" fill="none" stroke="var(--c3)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,99.7 L622.0,99.7" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 4" stroke-linejoin="round"/>
+<line x1="84" y1="28" x2="104" y2="28" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="32" font-size="12" fill="var(--fg)">chính xác  E[v_T] = θ + (v₀ − θ)·exp(−κT)</text>
+<line x1="84" y1="46" x2="104" y2="46" stroke="var(--c3)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="50" font-size="12" fill="var(--fg)">một bước Euler  v₀ + κ(θ − v₀)T  (luận văn)</text>
+<line x1="84" y1="64" x2="104" y2="64" stroke="var(--muted)" stroke-width="2.4" stroke-dasharray="3 4"/>
+<text x="110" y="68" font-size="12" fill="var(--fg)">θ</text>
+</svg></div>
+      <figcaption><b>Hình 10.</b> Kỳ vọng của v_T: công thức chính xác so với một bước Euler, tham số lát 31/01/2024 (κ = 4,29, θ = 0,0227). Ở 61 ngày, kỳ vọng Euler cao hơn 40%; sau κT = 1 nó vượt cả θ. Cách sửa: nạp kỳ vọng chính xác, hoặc chia nhỏ thành nhiều bước con.</figcaption>
+    </figure>
+
+    <div class="ri"><span class="k">R3</span><div>
+      <h3>Tương quan ρ không đi vào mạch<span class="sev h">cao</span></h3>
+      <p class="prose">ρ là tham số tạo ra skew, và nó được calibrate cẩn thận. Nhưng cả ba bộ nạp đều không dùng nó. Trong bước Euler, cú sốc giá là \(\rho Z^v + \sqrt{1-\rho^2}Z^\perp\). Thiếu số hạng này, mô hình lượng tử gần với mô hình stochastic-vol không tương quan, vốn cho smile đối xứng thay vì skew của SPX. Cách sửa: suy ra cú sốc phương sai \(Z^v\) từ thanh ghi phương sai rồi nạp \(S_2\) có điều kiện, \(\ln S_2\mid(S_1,v,Z^v)\sim\mathcal{N}\big(\ln S_1 + (r-\tfrac12v)\Delta t + \rho\sqrt{v\Delta t}\,Z^v,\ (1-\rho^2)v\Delta t\big)\), hoặc nạp trực tiếp phân phối đồng thời của \((v, S)\).</p>
+    </div></div>
+
+    <div class="ri"><span class="k">R4</span><div>
+      <h3>Điều kiện hóa và cách nối dây trong mạch<span class="sev m">trung bình</span></h3>
+      <p class="prose">Phần lời văn nói \(S_2\) được rút theo \((S_1, V_1)\). Tuy nhiên theo hình vẽ, \(\mathcal{P}_{S_2}\) chỉ tác động lên (q2, q5, q6) và không được điều khiển bởi thanh ghi v hay S₁. Vậy mạch mã hóa tích các phân phối biên \(p^v\,p^{S_1}p^{S_2}\), chứ không phải một chuỗi Markov. Còn ba điểm nên kiểm tra lại trong notebook. Tầng Hadamard đứng trước các bộ nạp, nhưng mạch phân phối của Qiskit giả định đầu vào là \(|0\rangle\). Payoff F đọc cả q0 và q1, tức các bit thấp của v và S₁, trong khi payoff chỉ nên phụ thuộc \(S_2\) = (q2, q5, q6). Và lưới 2 qubit với \(\ell_v = \max(\sigma_v, \mu_v-3\sigma_v)\) dồn 98% khối lượng vào hai điểm giữa.</p>
+    </div></div>
+
+    <div class="ri"><span class="k">R5</span><div>
+      <h3>Các phát biểu cần chỉnh lại<span class="sev l">thấp</span></h3>
+      <p class="prose">Mục 7.2.1 của khóa luận viết sai số QAE giảm theo \(O(1/\sqrt{M})\). Đó là tốc độ của Monte Carlo; QAE cho \(O(1/M)\), hoặc \(O(M^{-2/3})\) khi tính cả xấp xỉ payoff. Phép phản xạ \(S_0\) nên là \(I - 2|0\rangle\langle0|\). Phát biểu \(\sin y \approx y + \tfrac12\) nên sửa thành \(\sin^2(\tfrac\pi4+\delta)\approx\tfrac12+\delta\). Cuối cùng, kết luận rằng phương pháp lượng tử "giảm đáng kể thời gian tính toán" ở đây là phát biểu lý thuyết: khóa luận không báo cáo so sánh thời gian chạy hay số lần gọi so với Heston–FFT hoặc Monte Carlo cổ điển, và sai số định giá của Heston–FFT, vốn là benchmark tự nhiên, cũng chưa được lập bảng.</p>
+    </div></div>
+  </div>
+
+  <div class="def warn"><span class="t">Ngân sách sai số, gói trong một dòng</span>
+    <div class="eq">\[ \underbrace{|\hat C - C^{\text{mkt}}|}_{\text{reported}} \le \underbrace{|C^{\text{Hes}} - C^{\text{mkt}}|}_{\text{model fit}} + \underbrace{|C^{\text{disc}} - C^{\text{Hes}}|}_{\text{R1–R4: dominant}} + \underbrace{|C^{\text{enc}} - C^{\text{disc}}|}_{O(c^2)} + \underbrace{|\hat C - C^{\text{enc}}|}_{O(\varepsilon/c)} \]</div>
+    <p class="prose">MAE được báo cáo gộp cả bốn số hạng. Báo cáo riêng từng số hạng (Heston–FFT so với thị trường, tính cổ điển trên phân phối rời rạc so với Heston–FFT, và QAE so với statevector chính xác) sẽ cho thấy chính xác nên dùng qubit tiếp theo vào đâu.</p>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="vi-s11">
+  <h2><span class="n">11</span>Ý nghĩa và ứng dụng</h2>
+  <div class="cards">
+    <div class="card"><h3>Quy trình là đúng hướng</h3><p>Calibrate bằng cổ điển, định giá bằng lượng tử là kiến trúc mà phần lớn nghiên cứu trong ngành cùng hướng tới. Calibrate là bài toán tối ưu ít chiều mà công cụ cổ điển đã nhanh; định giá là phép tính kỳ vọng khối lượng lớn, nơi QAE có thể giúp.</p></div>
+    <div class="card"><h3>Nút thắt là rời rạc hóa, không phải QAE</h3><p>Với ε = 0,02, số hạng QAE nhỏ so với sai số do chỉ có 2–3 qubit cho mỗi phân phối. Muốn có lợi thế gần hạn, trước hết phải giải quyết khâu chuẩn bị trạng thái.</p></div>
+    <div class="card"><h3>Tăng tốc là tiệm cận</h3><p>Ước tính tài nguyên cho bài toán định giá phái sinh có ích (Chakrabarti và cộng sự, 2021) cần khoảng 7.500 qubit logic và T-depth khoảng 54 triệu. Đó là phần cứng chịu lỗi, còn nhiều năm nữa. Kết quả hiện nay là bằng chứng khái niệm trên simulator.</p></div>
+  </div>
+  <h3>Loại kết quả này thường được dùng ở đâu</h3>
+  <ul class="prose">
+    <li><b>Phái sinh phụ thuộc đường đi và đa tài sản</b> (Asian, barrier, basket), nơi không có công thức Fourier và Monte Carlo là mặc định. Lợi thế của QAE tăng theo số chiều vì phương pháp Fourier không mở rộng được.</li>
+    <li><b>Đo lường rủi ro.</b> VaR và CVaR cũng là kỳ vọng của hàm chỉ báo hoặc hàm tuyến tính, nên cùng một \(\mathcal{A}\) với payoff dạng so sánh sẽ cho ra chúng (Woerner &amp; Egger, 2019).</li>
+    <li><b>XVA và định giá lại danh mục</b>, đòi hỏi hàng triệu kỳ vọng lồng nhau và là mục tiêu được nhắc nhiều nhất cho lợi thế lượng tử tương lai tại ngân hàng.</li>
+    <li><b>Greeks</b> qua ước lượng gradient lượng tử, tái sử dụng cùng mạch với phép dịch tham số.</li>
+  </ul>
+</section>
+
+<!-- 12 -->
+<section id="vi-s12">
+  <h2><span class="n">12</span>Gợi ý mở rộng</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Hướng</th><th>Cần làm gì</th><th>Vì sao</th></tr></thead>
+    <tbody>
+      <tr><td>Sửa moment</td><td>Dùng \(\Sigma^2(T)\) và \(\mathbb{E}[v_T]\) chính xác; thêm ρ qua cú sốc Cholesky</td><td>Loại bỏ R1–R3 mà không tốn thêm qubit</td></tr>
+      <tr><td>Nạp có điều kiện</td><td>Bộ nạp có điều khiển \(\mathcal{P}_{S_2\mid S_1,v}\), hoặc Grover–Rudolph trên phân phối đồng thời</td><td>Biến tích các phân phối biên thành đường Markov thật sự</td></tr>
+      <tr><td>Sơ đồ tốt hơn</td><td>Sơ đồ QE của Andersen hoặc khớp moment cho v</td><td>Chính xác chỉ với một hai bước lớn</td></tr>
+      <tr><td>Bộ nạp học được</td><td>qGAN hoặc mạch biến phân huấn luyện trên mật độ Heston–FFT</td><td>Mạch nông, mật độ đã chính xác từ Mục 4</td></tr>
+      <tr><td>Phân rã sai số</td><td>Báo cáo riêng bốn số hạng của ngân sách sai số</td><td>Cho thấy cách sửa nào đáng làm</td></tr>
+      <tr><td>So sánh công bằng</td><td>MC cổ điển so với QAE ở cùng số lần gọi; sai số tương đối theo moneyness và kỳ hạn</td><td>Biến nhận định "lượng tử so với cổ điển" thành thứ đo được</td></tr>
+      <tr><td>Nhiễu và phần cứng</td><td>Chạy với mô hình nhiễu hoặc trên phần cứng IBM; thử biến thể độ sâu thấp (MLAE, power-law AE)</td><td>Cho thấy độ sâu giới hạn k dùng được ra sao</td></tr>
+      <tr><td>Sản phẩm khác</td><td>Quyền chọn Asian/barrier theo Heston; VaR/CVaR; chứng quyền có bảo đảm tại Việt Nam</td><td>Nơi Fourier bất lực và QAE có cơ hội thắng</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 13 -->
+<section id="vi-s13">
+  <h2><span class="n">13</span>Tài liệu tham khảo</h2>
+  <ul class="prose note">
+    <li>Heston, S. L. (1993). A closed-form solution for options with stochastic volatility. <i>Review of Financial Studies</i>, 6(2), 327–343.</li>
+    <li>Carr, P. &amp; Madan, D. (1999). Option valuation using the fast Fourier transform. <i>Journal of Computational Finance</i>, 2(4).</li>
+    <li>Albrecher, H., Mayer, P., Schoutens, W. &amp; Tistaert, J. (2007). The little Heston trap. <i>Wilmott Magazine</i>.</li>
+    <li>Lord, R., Koekkoek, R. &amp; van Dijk, D. (2010). A comparison of biased simulation schemes for stochastic volatility models. <i>Quantitative Finance</i>, 10(2).</li>
+    <li>Andersen, L. (2008). Simple and efficient simulation of the Heston stochastic volatility model. <i>Journal of Computational Finance</i>, 11(3).</li>
+    <li>Brassard, G., Høyer, P., Mosca, M. &amp; Tapp, A. (2002). Quantum amplitude amplification and estimation. <i>Contemporary Mathematics</i>, 305.</li>
+    <li>Grover, L. &amp; Rudolph, T. (2002). Creating superpositions that correspond to efficiently integrable probability distributions. arXiv:quant-ph/0208112.</li>
+    <li>Woerner, S. &amp; Egger, D. J. (2019). Quantum risk analysis. <i>npj Quantum Information</i>, 5, 15.</li>
+    <li>Stamatopoulos, N. et al. (2020). Option pricing using quantum computers. <i>Quantum</i>, 4, 291.</li>
+    <li>Grinko, D., Gacon, J., Zoufal, C. &amp; Woerner, S. (2021). Iterative quantum amplitude estimation. <i>npj Quantum Information</i>, 7, 52.</li>
+    <li>Chakrabarti, S. et al. (2021). A threshold for quantum advantage in derivative pricing. <i>Quantum</i>, 5, 463.</li>
+    <li>Rebentrost, P., Gupt, B. &amp; Bromley, T. R. (2018). Quantum computational finance: Monte Carlo pricing of financial derivatives. <i>Physical Review A</i>, 98, 022321.</li>
+    <li>Ngô Thiện Mỹ (2024). <i>Quantum versus Classical: A Study of Heston Model in Option Pricing</i>. B.Sc. thesis, International University – VNU-HCM.</li>
+  </ul>
+</section>
+</main>
+</div>
+</div>
+<div id="view-en" class="tex-defer" hidden><div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <div class="h">Contents</div>
+  <a href="#s1">1 · Problem</a>
+  <a href="#s2">2 · Pipeline</a>
+  <a href="#s3">3 · Heston model</a>
+  <a href="#s4">4 · FFT calibration</a>
+  <a href="#s5">5 · Quantum toolkit</a>
+  <a href="#s6">6 · Amplitude estimation</a>
+  <a href="#s7">7 · Quantum Heston circuit</a>
+  <a href="#s8">8 · Data & calibration</a>
+  <a href="#s9">9 · Results</a>
+  <a href="#s10">10 · Technical review</a>
+  <a href="#s11">11 · Implications</a>
+  <a href="#s12">12 · Extensions</a>
+  <a href="#s13">13 · References</a>
+</nav>
+
+<main>
+<header>
+  <a class="back" href="/research/">← Lily Ngo · Research</a>
+  <div class="eyebrow">Research report · B.Sc. thesis in Applied Mathematics (FE & RM), International University – VNU-HCM, July 2024</div>
+  <h1>Quantum versus Classical: the Heston Model in Option Pricing</h1>
+  <p class="meta">Ngô Thiện Mỹ · Supervisor: Assoc. Prof. Trần Vũ Khanh, PhD</p>
+  <div class="abstract">
+    <p><b>Abstract.</b> The thesis builds a quantum circuit that prices European call options under the Heston stochastic-volatility model. Heston parameters are first calibrated classically, with FFT pricing, on S&amp;P 500 (SPX) options from December 2023. These parameters then feed a 7-qubit circuit. The circuit loads discretised distributions for variance and price along an Euler path, encodes the call payoff into the amplitude of an ancilla qubit, and reads the price with Quantum Amplitude Estimation (QAE). On a simulator the quantum prices reach MAE 20.23 and RMSE 29.03 index points against market prices. The study shows the full pipeline end to end. It also shows that, at today's qubit counts, discretisation error dominates the theoretical quadratic speed-up of QAE.</p>
+    <div class="stats">
+      <div class="stat"><span class="v">18,828</span><span class="l">SPX call quotes after cleaning</span></div>
+      <div class="stat"><span class="v">184</span><span class="l">calibrated (date, expiry) slices</span></div>
+      <div class="stat"><span class="v">7</span><span class="l">qubits in the pricing circuit</span></div>
+      <div class="stat"><span class="v">20.23</span><span class="l">MAE (index pts)</span></div>
+      <div class="stat"><span class="v">29.03</span><span class="l">RMSE (index pts)</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="n">1</span>Problem and contribution</h2>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p>An option price is an expectation. Under the risk-neutral measure \(\mathbb{Q}\), a European call with strike \(K\) and maturity \(T\) is worth</p>
+  </div>
+  <div class="eq">\[ C_0 = e^{-rT}\,\mathbb{E}^{\mathbb{Q}}\big[\max(S_T - K,\,0)\big]. \]</div>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p>For simple models this expectation has a closed form. For realistic models, and for path-dependent products, banks estimate it by Monte Carlo. Monte Carlo error falls like \(1/\sqrt{N}\), so halving the error costs four times the samples. Quantum Amplitude Estimation promises error \(\sim 1/N\) in the number of oracle calls. That is a quadratic speed-up.</p>
+    <p>Most quantum-finance demonstrations price options under Black–Scholes, where the answer is already known in closed form. This thesis asks a harder question: can the same quantum machinery handle <b>stochastic volatility</b>, and how close does it get to <b>real market prices</b>?</p>
+  </div>
+  <div class="cards">
+    <div class="card"><h3>Contribution 1</h3><p>A classical Heston–FFT calibration on one month of SPX data, giving a daily term structure of \((\rho,\sigma,\theta,\kappa,v_0)\).</p></div>
+    <div class="card"><h3>Contribution 2</h3><p>A 7-qubit circuit that chains variance and price distributions along a two-step Euler path and prices calls with QAE.</p></div>
+    <div class="card"><h3>Contribution 3</h3><p>An empirical error measurement against market quotes, and an analysis of where the error comes from.</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="n">2</span>End-to-end pipeline</h2>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 760 300" width="100%" style="min-width:620px;max-width:760px" role="img" aria-label="pipeline">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+        <text x="10" y="20" font-size="11" letter-spacing="1.2" fill="var(--c2)" font-weight="600">CLASSICAL</text>
+        <text x="10" y="170" font-size="11" letter-spacing="1.2" fill="var(--c1)" font-weight="600">QUANTUM (SIMULATED)</text>
+        <g font-size="12.5">
+          <rect x="10" y="32" width="160" height="84" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="90" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">SPX option chain</text>
+          <text x="90" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">Dec 2023, EOD</text>
+          <text x="90" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">filters → 18,828 quotes</text>
+
+          <rect x="210" y="32" width="170" height="84" rx="5" fill="var(--panel)" stroke="var(--c2)"/>
+          <text x="295" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">Heston–FFT pricer</text>
+          <text x="295" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">characteristic function</text>
+          <text x="295" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">+ nonlinear least squares</text>
+
+          <rect x="420" y="32" width="160" height="84" rx="5" fill="var(--panel)" stroke="var(--rule)"/>
+          <text x="500" y="58" text-anchor="middle" fill="var(--fg)" font-weight="600">Θ = (ρ, σ, θ, κ, v₀)</text>
+          <text x="500" y="78" text-anchor="middle" fill="var(--muted)" font-size="11.5">one set per</text>
+          <text x="500" y="96" text-anchor="middle" fill="var(--muted)" font-size="11.5">(quote day, expiry)</text>
+        </g>
+        <line x1="170" y1="74" x2="208" y2="74" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <line x1="380" y1="74" x2="418" y2="74" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <path d="M580,74 L620,74 L620,140 L90,140 L90,180" fill="none" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <g font-size="12.5">
+          <rect x="10" y="182" width="160" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="90" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Uncertainty model</text>
+          <text x="90" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">load p(v), p(S₁), p(S₂)</text>
+          <text x="90" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">into amplitudes</text>
+          <text x="90" y="264" text-anchor="middle" fill="var(--muted)" font-size="11.5">2 + 2 + 3 qubits</text>
+
+          <rect x="210" y="182" width="170" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="295" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Payoff operator F</text>
+          <text x="295" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">comparator + controlled R_y</text>
+          <text x="295" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">P(1) ≈ ½ + c(E f − ½)</text>
+
+          <rect x="420" y="182" width="160" height="96" rx="5" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="500" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Iterative QAE</text>
+          <text x="500" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">ε = 0.02, α = 0.05</text>
+          <text x="500" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">estimate a = P(1)</text>
+
+          <rect x="620" y="182" width="130" height="96" rx="5" fill="var(--panel)" stroke="var(--c3)"/>
+          <text x="685" y="208" text-anchor="middle" fill="var(--fg)" font-weight="600">Evaluate</text>
+          <text x="685" y="228" text-anchor="middle" fill="var(--muted)" font-size="11.5">price vs market mid</text>
+          <text x="685" y="246" text-anchor="middle" fill="var(--muted)" font-size="11.5">MAE, RMSE</text>
+        </g>
+        <line x1="170" y1="230" x2="208" y2="230" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <line x1="380" y1="230" x2="418" y2="230" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <line x1="580" y1="230" x2="618" y2="230" stroke="var(--muted)" marker-end="url(#ar)"/>
+      </svg>
+    </div>
+    <figcaption><b>Figure 1.</b> The classical stage turns market quotes into model parameters. The quantum stage turns parameters into a price. The two stages only share Θ, so each can be improved on its own.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="n">3</span>The Heston model</h2>
+  <h3>3.1 Why leave Black–Scholes</h3>
+  <p class="prose">Black–Scholes assumes \(dS_t = rS_t\,dt + \sigma S_t\,dW_t\) with constant \(\sigma\). Then \(\ln S_T\) is Gaussian and every strike implies the same volatility. Market implied volatilities instead form a skew: low strikes trade at higher volatility. Heston (1993) fixes this by letting variance follow its own random process.</p>
+
+  <h3>3.2 Dynamics under \(\mathbb{Q}\)</h3>
+  <div class="eq">\[ \begin{aligned} dS_t &= rS_t\,dt + \sqrt{v_t}\,S_t\,dW^S_t,\\ dv_t &= \kappa(\theta - v_t)\,dt + \sigma\sqrt{v_t}\,dW^v_t,\\ d\langle W^S, W^v\rangle_t &= \rho\,dt. \end{aligned} \]</div>
+  <div class="tw"><table>
+    <thead><tr><th>Symbol</th><th>Role</th><th>Effect on prices</th></tr></thead>
+    <tbody>
+      <tr><td>\(v_0\)</td><td>spot variance</td><td>level of short-dated implied vol</td></tr>
+      <tr><td>\(\theta\)</td><td>long-run variance</td><td>level of long-dated implied vol</td></tr>
+      <tr><td>\(\kappa\)</td><td>mean-reversion speed</td><td>how fast the term structure moves from \(v_0\) to \(\theta\)</td></tr>
+      <tr><td>\(\sigma\)</td><td>vol of variance</td><td>curvature (smile) and fat tails</td></tr>
+      <tr><td>\(\rho\)</td><td>spot–vol correlation</td><td>slope (skew); \(\rho&lt;0\) gives the equity left skew</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">The variance is a CIR (square-root) process. Its conditional mean has a closed form, which we will use later to check the quantum discretisation:</p>
+  <div class="eq">\[ \mathbb{E}[v_T\mid v_0] = \theta + (v_0-\theta)e^{-\kappa T}, \qquad \mathbb{E}\Big[\int_0^T v_s\,ds\Big] = \theta T + (v_0-\theta)\frac{1-e^{-\kappa T}}{\kappa}. \]</div>
+  <p class="prose">The process stays strictly positive when the Feller condition \(2\kappa\theta \ge \sigma^2\) holds. Several calibrated SPX slices violate it: for the 2023-12-29 → 2024-03-15 slice, \(2\kappa\theta = 0.24 &lt; \sigma^2 = 0.34\). So simulation schemes must handle \(v_t\) touching zero.</p>
+
+  <h3>3.3 Characteristic function</h3>
+  <p class="prose">Heston is an affine model. The log-price characteristic function \(\phi_T(u) = \mathbb{E}[e^{iu\ln S_T}]\) is exponential-affine in \((\ln S_0, v_0)\):</p>
+  <div class="eq">\[ \phi_T(u) = \exp\big(C(T,u) + D(T,u)\,v_0 + iu\ln S_0\big), \]</div>
+  <div class="eq">\[ \begin{aligned} d &= \sqrt{(\rho\sigma iu - \kappa)^2 + \sigma^2(iu + u^2)}, \qquad g = \frac{\kappa - \rho\sigma iu - d}{\kappa - \rho\sigma iu + d},\\ C(T,u) &= iurT + \frac{\kappa\theta}{\sigma^2}\Big[(\kappa - \rho\sigma iu - d)T - 2\ln\frac{1-ge^{-dT}}{1-g}\Big],\\ D(T,u) &= \frac{\kappa - \rho\sigma iu - d}{\sigma^2}\cdot\frac{1-e^{-dT}}{1-ge^{-dT}}. \end{aligned} \]</div>
+  <p class="prose note">This is the "little Heston trap" form (Albrecher et al., 2007). It uses \(e^{-dT}\) and avoids the branch-cut jumps of the complex logarithm that the original form suffers at long maturities.</p>
+
+  <h3>3.4 Euler discretisation</h3>
+  <p class="prose">The quantum circuit cannot load a continuous path. It needs a few discrete time steps. On a grid \(t_j = j\Delta t\), the Euler scheme with full truncation \(v^+ = \max(v,0)\) (Lord, Koekkoek &amp; van Dijk, 2010) reads</p>
+  <div class="eq">\[ \begin{aligned} v_{j+1} &= v_j + \kappa(\theta - v_j^+)\Delta t + \sigma\sqrt{v_j^+\Delta t}\;Z^v_j,\\ \ln S_{j+1} &= \ln S_j + \big(r - \tfrac12 v_j^+\big)\Delta t + \sqrt{v_j^+\Delta t}\,\big(\rho Z^v_j + \sqrt{1-\rho^2}\,Z^\perp_j\big), \end{aligned} \]</div>
+  <p class="prose">with \(Z^v_j, Z^\perp_j\) independent standard normals. The Cholesky term \(\rho Z^v + \sqrt{1-\rho^2}Z^\perp\) is where the skew enters a simulation. Given \(v_j\), the next log-price is Gaussian, so \(S_{j+1}\mid(S_j,v_j)\) is log-normal. The thesis uses exactly this conditional structure to build its circuit.</p>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="n">4</span>Classical calibration with FFT</h2>
+  <p class="prose">A call price is not square-integrable in log-strike \(k=\ln K\), because \(C\to S_0\) as \(k\to-\infty\). Carr &amp; Madan (1999) damp it by \(e^{\alpha k}\) with \(\alpha&gt;0\). The damped price \(c(k) = e^{\alpha k}C(k)\) has the Fourier transform</p>
+  <div class="eq">\[ \psi_T(u) = \frac{e^{-rT}\,\phi_T\big(u - (\alpha+1)i\big)}{\alpha^2 + \alpha - u^2 + i(2\alpha+1)u}, \qquad C(k) = \frac{e^{-\alpha k}}{\pi}\int_0^\infty \mathrm{Re}\big[e^{-iuk}\psi_T(u)\big]\,du. \]</div>
+  <p class="prose">Discretise with \(u_j = j\eta\) and a log-strike grid \(k_m = -b + m\lambda\), \(m=0,\dots,N-1\). The integral becomes a discrete Fourier transform, which FFT evaluates for all \(N\) strikes in \(O(N\log N)\):</p>
+  <div class="eq">\[ C(k_m) \approx \frac{e^{-\alpha k_m}}{\pi}\sum_{j=0}^{N-1} e^{-i\frac{2\pi}{N}jm}\; e^{ibu_j}\,\psi_T(u_j)\,w_j\,\eta, \qquad \lambda\eta = \frac{2\pi}{N}. \]</div>
+  <p class="prose">The constraint \(\lambda\eta = 2\pi/N\) is the Nyquist trade-off. A fine strike grid (small \(\lambda\)) forces a coarse frequency grid (large \(\eta\)), and the other way round. Weights \(w_j\) come from the trapezoid or Simpson rule.</p>
+  <p class="prose">Calibration then solves a nonlinear least-squares problem for each (quote day, expiry) slice:</p>
+  <div class="eq">\[ \Theta^\star = \arg\min_{\Theta=(\kappa,\theta,v_0,\sigma,\rho)} \sum_{i=1}^{N}\Big(C^{\text{mkt}}(K_i,T) - C^{\text{Heston}}(K_i,T;\Theta)\Big)^2. \]</div>
+  <p class="prose note">The objective is non-convex. Parameters are also partly redundant: a large \(\kappa\) pulls variance to \(\theta\) so fast that \(v_0\) barely matters for anything but the shortest expiries. This shows up clearly in the calibrated values in Section 8.</p>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="n">5</span>Quantum computing toolkit</h2>
+  <h3>5.1 Qubits and registers</h3>
+  <div class="pair" style="align-items:center">
+    <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+      <p>A qubit is a unit vector in \(\mathbb{C}^2\):</p>
+      <div class="eq">\[ |\psi\rangle = \cos\tfrac{\vartheta}{2}|0\rangle + e^{i\varphi}\sin\tfrac{\vartheta}{2}|1\rangle. \]</div>
+      <p>Measuring gives 1 with probability \(\sin^2(\vartheta/2)\). An \(n\)-qubit register lives in \((\mathbb{C}^2)^{\otimes n}\cong\mathbb{C}^{2^n}\), so it can hold a whole discrete distribution over \(2^n\) grid points at once:</p>
+      <div class="eq">\[ |\psi\rangle = \sum_{i=0}^{2^n-1}\sqrt{p_i}\,|i\rangle_n,\qquad \sum_i p_i = 1. \]</div>
+    </div>
+    <figure>
+      <div class="plate">
+        <svg viewBox="0 0 300 290" width="100%" style="max-width:300px" role="img" aria-label="Bloch sphere">
+          <circle cx="150" cy="150" r="100" fill="none" stroke="var(--muted)"/>
+          <ellipse cx="150" cy="150" rx="100" ry="28" fill="none" stroke="var(--rule)"/>
+          <path d="M50,150 A100,28 0 0 0 250,150" fill="none" stroke="var(--muted)"/>
+          <line x1="150" y1="40" x2="150" y2="262" stroke="var(--rule)" stroke-dasharray="3 3"/>
+          <text x="150" y="32" text-anchor="middle" font-size="14" fill="var(--fg)">|0⟩</text>
+          <text x="150" y="280" text-anchor="middle" font-size="14" fill="var(--fg)">|1⟩</text>
+          <text x="262" y="154" font-size="12" fill="var(--muted)">|+⟩</text>
+          <line x1="150" y1="150" x2="214" y2="88" stroke="var(--c1)" stroke-width="2.5"/>
+          <circle cx="214" cy="88" r="5" fill="var(--c1)"/>
+          <line x1="214" y1="88" x2="214" y2="163" stroke="var(--c1)" stroke-dasharray="3 3"/>
+          <line x1="150" y1="150" x2="214" y2="163" stroke="var(--c1)" stroke-dasharray="3 3"/>
+          <path d="M150,112 A38,38 0 0 1 178,124" fill="none" stroke="var(--c2)" stroke-width="1.6"/>
+          <text x="168" y="108" font-size="13" fill="var(--c2)">ϑ</text>
+          <path d="M130,160 A26,9 0 0 0 176,158" fill="none" stroke="var(--c2)" stroke-width="1.6"/>
+          <text x="148" y="182" font-size="13" fill="var(--c2)">φ</text>
+          <text x="222" y="84" font-size="13" fill="var(--c1)">|ψ⟩</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 2.</b> Bloch sphere. The polar angle ϑ sets the measurement probability; R_y rotations move the state along a meridian.</figcaption>
+    </figure>
+  </div>
+
+  <h3>5.2 The gates this circuit uses</h3>
+  <div class="eq">\[ H = \tfrac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\quad R_y(\beta) = \begin{pmatrix}\cos\frac\beta2 & -\sin\frac\beta2\\ \sin\frac\beta2 & \cos\frac\beta2\end{pmatrix},\quad \mathrm{CNOT} = |0\rangle\langle0|\otimes I + |1\rangle\langle1|\otimes X. \]</div>
+  <ul class="prose">
+    <li><b>Hadamard</b> \(H^{\otimes n}|0\rangle = 2^{-n/2}\sum_i|i\rangle\) creates a uniform superposition.</li>
+    <li><b>Controlled \(R_y\)</b> rotates a target qubit by an angle that depends on the control register. This is how both distributions and payoffs are written into amplitudes.</li>
+    <li><b>Comparator</b> (built from CNOT/Toffoli) flips an ancilla when the register value \(i\) satisfies \(S_i \ge K\).</li>
+  </ul>
+
+  <h3>5.3 Loading a distribution</h3>
+  <p class="prose">To load a continuous law on \([\ell, h]\) with \(n\) qubits, truncate it, discretise it on the affine grid \(x_i = \ell + i\,\frac{h-\ell}{2^n-1}\), and renormalise:</p>
+  <div class="eq">\[ p_i = \frac{f(x_i)}{\sum_{j} f(x_j)},\qquad \mathcal{P}_X|0\rangle_n = \sum_{i=0}^{2^n-1}\sqrt{p_i}\,|i\rangle_n. \]</div>
+  <p class="prose">The Grover–Rudolph construction does this with a cascade of controlled \(R_y\) rotations, one level per qubit. For the thesis, \(f\) is a normal density for variance and a log-normal density for price, bounded at mean \(\pm 3\) standard deviations.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 310" width="100%" style="max-width:640px" role="img" aria-label="amplitude loading">
+<line x1="66" y1="246.0" x2="622" y2="246.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="250.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66" y1="170.0" x2="622" y2="170.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="174.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.2</text>
+<line x1="66" y1="94.0" x2="622" y2="94.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="98.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.4</text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.6</text>
+<line x1="106.7" y1="246" x2="106.7" y2="251" stroke="var(--muted)"/>
+<text x="106.7" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|0⟩</text>
+<line x1="174.5" y1="246" x2="174.5" y2="251" stroke="var(--muted)"/>
+<text x="174.5" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|1⟩</text>
+<line x1="242.3" y1="246" x2="242.3" y2="251" stroke="var(--muted)"/>
+<text x="242.3" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|2⟩</text>
+<line x1="310.1" y1="246" x2="310.1" y2="251" stroke="var(--muted)"/>
+<text x="310.1" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|3⟩</text>
+<line x1="377.9" y1="246" x2="377.9" y2="251" stroke="var(--muted)"/>
+<text x="377.9" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|4⟩</text>
+<line x1="445.7" y1="246" x2="445.7" y2="251" stroke="var(--muted)"/>
+<text x="445.7" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|5⟩</text>
+<line x1="513.5" y1="246" x2="513.5" y2="251" stroke="var(--muted)"/>
+<text x="513.5" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|6⟩</text>
+<line x1="581.3" y1="246" x2="581.3" y2="251" stroke="var(--muted)"/>
+<text x="581.3" y="265" text-anchor="middle" font-size="11.5" fill="var(--muted)">|7⟩</text>
+<line x1="66" y1="246" x2="622" y2="246" stroke="var(--muted)"/>
+<text x="344" y="302" text-anchor="middle" font-size="12.5" fill="var(--fg)">Basis state |i⟩ (3 qubits) and its price level S_i</text>
+<text transform="translate(14,132) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">value</text>
+<text x="106.7" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,195</text><text x="174.5" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,326</text><text x="242.3" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,457</text><text x="310.1" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,588</text><text x="377.9" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,719</text><text x="445.7" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,850</text><text x="513.5" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">4,980</text><text x="581.3" y="279" text-anchor="middle" font-size="10.5" fill="var(--muted)">5,111</text>
+<rect x="83.7" y="244.4" width="22" height="1.6" fill="var(--c1)"/>
+<rect x="151.5" y="229.5" width="22" height="16.5" fill="var(--c1)"/>
+<rect x="219.3" y="177.1" width="22" height="68.9" fill="var(--c1)"/>
+<rect x="287.1" y="119.7" width="22" height="126.3" fill="var(--c1)"/>
+<rect x="354.9" y="137.5" width="22" height="108.5" fill="var(--c1)"/>
+<rect x="422.7" y="199.5" width="22" height="46.5" fill="var(--c1)"/>
+<rect x="490.5" y="235.5" width="22" height="10.5" fill="var(--c1)"/>
+<rect x="558.3" y="244.7" width="22" height="1.3" fill="var(--c1)"/>
+<rect x="107.7" y="221.4" width="22" height="24.6" fill="var(--c2)"/>
+<rect x="175.5" y="166.9" width="22" height="79.1" fill="var(--c2)"/>
+<rect x="243.3" y="84.2" width="22" height="161.8" fill="var(--c2)"/>
+<rect x="311.1" y="26.9" width="22" height="219.1" fill="var(--c2)"/>
+<rect x="378.9" y="43.0" width="22" height="203.0" fill="var(--c2)"/>
+<rect x="446.7" y="113.1" width="22" height="132.9" fill="var(--c2)"/>
+<rect x="514.5" y="182.9" width="22" height="63.1" fill="var(--c2)"/>
+<rect x="582.3" y="223.7" width="22" height="22.3" fill="var(--c2)"/>
+<rect x="470" y="23" width="16" height="10" fill="var(--c1)"/>
+<text x="496" y="32" font-size="12" fill="var(--fg)">probability p_i</text>
+<rect x="470" y="41" width="16" height="10" fill="var(--c2)"/>
+<text x="496" y="50" font-size="12" fill="var(--fg)">amplitude √p_i</text>
+</svg></div>
+    <figcaption><b>Figure 3.</b> An 8-point log-normal for S_T loaded into 3 qubits. Measurement returns |i⟩ with probability p_i, the square of the stored amplitude. Parameters: S₀ = 4,594.63 (SPX close, 1 Dec 2023), T = 61 days, r = 5%, variance from the calibrated 2024-01-31 slice. Computed for illustration.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="n">6</span>Quantum Amplitude Estimation</h2>
+  <h3>6.1 From an expectation to an amplitude</h3>
+  <p class="prose">Let \(\mathcal{P}\) load \(\{p_i\}\) on \(n\) qubits, and let \(\mathcal{F}\) rotate one extra (objective) qubit according to a function \(f:\{0,\dots,2^n-1\}\to[0,1]\):</p>
+  <div class="eq">\[ \mathcal{F}:\ |i\rangle_n|0\rangle \mapsto |i\rangle_n\Big(\sqrt{1-f(i)}\,|0\rangle + \sqrt{f(i)}\,|1\rangle\Big). \]</div>
+  <p class="prose">The combined operator \(\mathcal{A} = \mathcal{F}(\mathcal{P}\otimes I)\) prepares</p>
+  <div class="eq">\[ \mathcal{A}|0\rangle_{n+1} = \sqrt{1-a}\,|\psi_0\rangle|0\rangle + \sqrt{a}\,|\psi_1\rangle|1\rangle, \qquad a = \sum_i p_i f(i) = \mathbb{E}[f(X)]. \]</div>
+  <div class="def"><span class="t">Key idea</span><p class="prose">The expectation we want is exactly the probability of reading 1 on the objective qubit. Pricing becomes the problem of estimating one amplitude.</p></div>
+
+  <h3>6.2 The Grover operator as a rotation</h3>
+  <p class="prose">Write \(a = \sin^2\theta_a\). Define the reflections \(S_\chi\) (flip the sign of states whose objective qubit is 1) and \(S_0 = I - 2|0\rangle\langle0|\). The Grover operator</p>
+  <div class="eq">\[ \mathcal{Q} = -\,\mathcal{A}\,S_0\,\mathcal{A}^{\dagger}S_\chi \]</div>
+  <p class="prose">acts on the 2-D plane spanned by the "bad" state \(|\psi_0\rangle|0\rangle\) and the "good" state \(|\psi_1\rangle|1\rangle\) as a rotation by \(2\theta_a\). After \(k\) applications,</p>
+  <div class="eq">\[ \mathcal{Q}^k\mathcal{A}|0\rangle = \cos\big((2k+1)\theta_a\big)|\psi_0\rangle|0\rangle + \sin\big((2k+1)\theta_a\big)|\psi_1\rangle|1\rangle. \]</div>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 520 300" width="100%" style="max-width:520px" role="img" aria-label="Grover rotation">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="context-stroke"/></marker></defs>
+        <line x1="60" y1="260" x2="470" y2="260" stroke="var(--muted)" marker-end="url(#ar2)"/>
+        <line x1="60" y1="260" x2="60" y2="30" stroke="var(--muted)" marker-end="url(#ar2)"/>
+        <text x="476" y="264" font-size="12.5" fill="var(--fg)">|bad⟩</text>
+        <text x="40" y="24" font-size="12.5" fill="var(--fg)">|good⟩</text>
+        <path d="M60,40 A220,220 0 0 1 280,260" fill="none" stroke="var(--rule)" stroke-dasharray="3 4"/>
+        <!-- theta_a = 15deg -->
+        <line x1="60" y1="260" x2="272.5" y2="203.1" stroke="var(--c1)" stroke-width="2.4" marker-end="url(#ar2)"/>
+        <text x="282" y="204" font-size="12.5" fill="var(--c1)">𝒜|0⟩</text>
+        <!-- 3 theta = 45deg -->
+        <line x1="60" y1="260" x2="215.6" y2="104.4" stroke="var(--c2)" stroke-width="2.4" marker-end="url(#ar2)"/>
+        <text x="222" y="100" font-size="12.5" fill="var(--c2)">𝒬𝒜|0⟩</text>
+        <!-- 5 theta = 75deg -->
+        <line x1="60" y1="260" x2="116.9" y2="47.5" stroke="var(--c3)" stroke-width="2.4" marker-end="url(#ar2)"/>
+        <text x="124" y="46" font-size="12.5" fill="var(--c3)">𝒬²𝒜|0⟩</text>
+        <path d="M150,260 A90,90 0 0 0 146.9,236.7" fill="none" stroke="var(--c1)"/>
+        <text x="158" y="250" font-size="12" fill="var(--c1)">θₐ</text>
+        <path d="M168.6,231 A112,112 0 0 0 139.2,180.8" fill="none" stroke="var(--c2)"/>
+        <text x="172" y="208" font-size="12" fill="var(--c2)">2θₐ</text>
+        <text x="300" y="150" font-size="12" fill="var(--muted)">each 𝒬 adds 2θₐ;</text>
+        <text x="300" y="168" font-size="12" fill="var(--muted)">measuring after k steps</text>
+        <text x="300" y="186" font-size="12" fill="var(--muted)">samples sin²((2k+1)θₐ)</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 4.</b> Geometry of amplitude amplification (drawn with θₐ = 15°). The angle grows linearly in k, so information about θₐ accumulates linearly in the number of oracle calls. That is the source of the 1/N rate.</figcaption>
+  </figure>
+
+  <h3>6.3 Estimation and its error</h3>
+  <p class="prose">Canonical QAE (Brassard et al., 2002) runs quantum phase estimation on \(\mathcal{Q}\) with \(m\) evaluation qubits, \(M = 2^m\). With probability at least \(8/\pi^2\),</p>
+  <div class="eq">\[ |\tilde a - a| \le \frac{2\pi\sqrt{a(1-a)}}{M} + \frac{\pi^2}{M^2} = O(M^{-1}). \]</div>
+  <p class="prose">Classical Monte Carlo with \(M\) samples has standard error \(\sqrt{a(1-a)/M} = O(M^{-1/2})\). The thesis uses <b>Iterative QAE</b> (Grinko et al., 2021). It drops phase estimation and picks a sequence of powers \(k\) adaptively, and it is specified by a target precision \(\varepsilon\) and a confidence level \(1-\alpha\). The thesis sets \(\varepsilon = 0.02\), \(\alpha = 0.05\). IQAE keeps the \(O(1/\varepsilon)\) query cost up to a \(\log(1/\alpha)\) factor and needs no extra evaluation qubits, which matters on a 7-qubit budget.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 320" width="100%" style="max-width:640px" role="img" aria-label="query complexity">
+<line x1="66" y1="270.0" x2="622" y2="270.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="274.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>1</tspan></text>
+<line x1="66" y1="234.0" x2="622" y2="234.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="238.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>2</tspan></text>
+<line x1="66" y1="198.0" x2="622" y2="198.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="202.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>3</tspan></text>
+<line x1="66" y1="162.0" x2="622" y2="162.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="166.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>4</tspan></text>
+<line x1="66" y1="126.0" x2="622" y2="126.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="130.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>5</tspan></text>
+<line x1="66" y1="90.0" x2="622" y2="90.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="94.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>6</tspan></text>
+<line x1="66" y1="54.0" x2="622" y2="54.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="58.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>7</tspan></text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10<tspan dy='-5' font-size='9'>8</tspan></text>
+<line x1="66.0" y1="270" x2="66.0" y2="275" stroke="var(--muted)"/>
+<text x="66.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−1</tspan></text>
+<line x1="251.3" y1="270" x2="251.3" y2="275" stroke="var(--muted)"/>
+<text x="251.3" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−2</tspan></text>
+<line x1="436.7" y1="270" x2="436.7" y2="275" stroke="var(--muted)"/>
+<text x="436.7" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−3</tspan></text>
+<line x1="622.0" y1="270" x2="622.0" y2="275" stroke="var(--muted)"/>
+<text x="622.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">10<tspan dy='−5' font−size='9'>−4</tspan></text>
+<line x1="66" y1="270" x2="622" y2="270" stroke="var(--muted)"/>
+<text x="344" y="312" text-anchor="middle" font-size="12.5" fill="var(--fg)">Target error ε (σ = 1)</text>
+<text transform="translate(14,144) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">Samples / oracle calls N</text>
+<line x1="195.5" y1="270.0" x2="195.5" y2="18.0" stroke="var(--c2)" stroke-dasharray="4 4"/><circle cx="195.5" cy="183.7" r="4" fill="var(--c3)"/><circle cx="195.5" cy="226.9" r="4" fill="var(--c1)"/><text x="203.5" y="177.7" font-size="11.5" fill="var(--fg)">2,500</text><text x="203.5" y="240.9" font-size="11.5" fill="var(--fg)">≈157</text><text x="201.5" y="262.0" font-size="11.5" fill="var(--c2)">ε = 0.02 (thesis)</text>
+<path d="M66.0,234.0 L80.3,228.5 L94.5,222.9 L108.8,217.4 L123.0,211.8 L137.3,206.3 L151.5,200.8 L165.8,195.2 L180.1,189.7 L194.3,184.2 L208.6,178.6 L222.8,173.1 L237.1,167.5 L251.3,162.0 L265.6,156.5 L279.8,150.9 L294.1,145.4 L308.4,139.8 L322.6,134.3 L336.9,128.8 L351.1,123.2 L365.4,117.7 L379.6,112.2 L393.9,106.6 L408.2,101.1 L422.4,95.5 L436.7,90.0 L450.9,84.5 L465.2,78.9 L479.4,73.4 L493.7,67.8 L507.9,62.3 L522.2,56.8 L536.5,51.2 L550.7,45.7 L565.0,40.2 L579.2,34.6 L593.5,29.1 L607.7,23.5 L622.0,18.0" fill="none" stroke="var(--c3)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,252.1 L80.3,249.3 L94.5,246.6 L108.8,243.8 L123.0,241.0 L137.3,238.3 L151.5,235.5 L165.8,232.7 L180.1,229.9 L194.3,227.2 L208.6,224.4 L222.8,221.6 L237.1,218.9 L251.3,216.1 L265.6,213.3 L279.8,210.6 L294.1,207.8 L308.4,205.0 L322.6,202.3 L336.9,199.5 L351.1,196.7 L365.4,193.9 L379.6,191.2 L393.9,188.4 L408.2,185.6 L422.4,182.9 L436.7,180.1 L450.9,177.3 L465.2,174.6 L479.4,171.8 L493.7,169.0 L507.9,166.3 L522.2,163.5 L536.5,160.7 L550.7,157.9 L565.0,155.2 L579.2,152.4 L593.5,149.6 L607.7,146.9 L622.0,144.1" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<line x1="84" y1="30" x2="104" y2="30" stroke="var(--c3)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="34" font-size="12" fill="var(--fg)">Classical Monte Carlo  N ≈ σ²/ε²</text>
+<line x1="84" y1="48" x2="104" y2="48" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="52" font-size="12" fill="var(--fg)">Amplitude estimation  N ≈ π/ε</text>
+</svg></div>
+    <figcaption><b>Figure 5.</b> Cost to reach error ε, ignoring constants. At the thesis target ε = 0.02, Monte Carlo needs about 2,500 samples and QAE about 157 oracle calls. The gap widens by a factor of 10 for every extra decimal of precision.</figcaption>
+  </figure>
+
+  <h3>6.4 Encoding the call payoff</h3>
+  <p class="prose">\(\mathcal{F}\) must output values in \([0,1]\), so the payoff is normalised on the price grid:</p>
+  <div class="eq">\[ f(i) = \frac{\max(S_i - K, 0)}{S_{\max} - K}\in[0,1], \qquad C_0 = e^{-rT}(S_{\max}-K)\,\mathbb{E}[f]. \]</div>
+  <p class="prose">A comparator marks \(S_i \ge K\). On that branch a controlled \(R_y\) applies an angle that is affine in \(i\). Since \(\sin^2\) is not linear, the trick of Woerner &amp; Egger (2019) uses its near-linear region around \(\pi/4\):</p>
+  <div class="eq">\[ \sin^2\!\Big(\tfrac{\pi}{4} + \delta\Big) = \tfrac12 + \tfrac12\sin 2\delta = \tfrac12 + \delta - \tfrac23\delta^3 + O(\delta^5),\qquad \delta_i = \tfrac{\pi}{2}c\,\big(f(i)-\tfrac12\big). \]</div>
+  <p class="prose">Summing over the distribution gives \(P(1) \approx \tfrac12 + \tfrac{\pi}{2}c\,(\mathbb{E}[f]-\tfrac12)\), which we invert for \(\mathbb{E}[f]\). Two errors pull against each other:</p>
+  <div class="eq">\[ \big|\widehat{\mathbb{E}f} - \mathbb{E}f\big| \;\lesssim\; \underbrace{\tfrac{2}{3}\cdot\tfrac{(\pi c/4)^3}{\pi c/2}}_{\text{bias} \;=\; O(c^2)} \;+\; \underbrace{\frac{\varepsilon}{\pi c/2}}_{\text{QAE noise} \;=\; O(\varepsilon/c)}. \]</div>
+  <p class="prose">A small \(c\) makes the sine almost linear but shrinks the signal, so QAE noise is amplified by \(1/c\). Balancing the two terms gives \(c\propto\varepsilon^{1/3}\) and an overall error \(O(\varepsilon^{2/3})\), i.e. \(O(M^{-2/3})\) in oracle calls. This is still better than Monte Carlo's \(M^{-1/2}\), but not the full \(M^{-1}\). Woerner &amp; Egger state the same rate.</p>
+  <figure>
+    <div class="plate"><svg viewBox="0 0 640 320" width="100%" style="max-width:640px" role="img" aria-label="payoff encoding">
+<line x1="66" y1="262.1" x2="622" y2="262.1" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="266.1" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.25</text>
+<line x1="66" y1="222.8" x2="622" y2="222.8" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="226.8" text-anchor="end" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="66" y1="183.4" x2="622" y2="183.4" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="187.4" text-anchor="end" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="66" y1="144.0" x2="622" y2="144.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="148.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.5</text>
+<line x1="66" y1="104.6" x2="622" y2="104.6" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="108.6" text-anchor="end" font-size="11.5" fill="var(--muted)">0.75</text>
+<line x1="66" y1="65.2" x2="622" y2="65.2" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="69.2" text-anchor="end" font-size="11.5" fill="var(--muted)">1</text>
+<line x1="66" y1="25.9" x2="622" y2="25.9" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="29.9" text-anchor="end" font-size="11.5" fill="var(--muted)">1.25</text>
+<line x1="66.0" y1="270" x2="66.0" y2="275" stroke="var(--muted)"/>
+<text x="66.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="205.0" y1="270" x2="205.0" y2="275" stroke="var(--muted)"/>
+<text x="205.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="344.0" y1="270" x2="344.0" y2="275" stroke="var(--muted)"/>
+<text x="344.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.5</text>
+<line x1="483.0" y1="270" x2="483.0" y2="275" stroke="var(--muted)"/>
+<text x="483.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.75</text>
+<line x1="622.0" y1="270" x2="622.0" y2="275" stroke="var(--muted)"/>
+<text x="622.0" y="289" text-anchor="middle" font-size="11.5" fill="var(--muted)">1</text>
+<line x1="66" y1="270" x2="622" y2="270" stroke="var(--muted)"/>
+<text x="344" y="312" text-anchor="middle" font-size="12.5" fill="var(--fg)">Normalised payoff f(S_i) ∈ [0, 1]</text>
+<text transform="translate(14,144) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">P(ancilla = 1 | i)</text>
+<path d="M66.0,222.8 L71.6,222.7 L77.1,222.6 L82.7,222.4 L88.2,222.1 L93.8,221.8 L99.4,221.4 L104.9,220.9 L110.5,220.3 L116.0,219.6 L121.6,218.9 L127.2,218.1 L132.7,217.2 L138.3,216.3 L143.8,215.3 L149.4,214.2 L155.0,213.0 L160.5,211.8 L166.1,210.5 L171.6,209.1 L177.2,207.7 L182.8,206.2 L188.3,204.7 L193.9,203.1 L199.4,201.4 L205.0,199.7 L210.6,197.9 L216.1,196.1 L221.7,194.2 L227.2,192.3 L232.8,190.3 L238.4,188.3 L243.9,186.2 L249.5,184.1 L255.0,181.9 L260.6,179.8 L266.2,177.5 L271.7,175.3 L277.3,173.0 L282.8,170.7 L288.4,168.3 L294.0,166.0 L299.5,163.6 L305.1,161.2 L310.6,158.8 L316.2,156.3 L321.8,153.9 L327.3,151.4 L332.9,148.9 L338.4,146.5 L344.0,144.0 L349.6,141.5 L355.1,139.1 L360.7,136.6 L366.2,134.1 L371.8,131.7 L377.4,129.2 L382.9,126.8 L388.5,124.4 L394.0,122.0 L399.6,119.7 L405.2,117.3 L410.7,115.0 L416.3,112.7 L421.8,110.5 L427.4,108.2 L433.0,106.1 L438.5,103.9 L444.1,101.8 L449.6,99.7 L455.2,97.7 L460.8,95.7 L466.3,93.8 L471.9,91.9 L477.4,90.1 L483.0,88.3 L488.6,86.6 L494.1,84.9 L499.7,83.3 L505.2,81.8 L510.8,80.3 L516.4,78.9 L521.9,77.5 L527.5,76.2 L533.0,75.0 L538.6,73.8 L544.2,72.7 L549.7,71.7 L555.3,70.8 L560.8,69.9 L566.4,69.1 L572.0,68.4 L577.5,67.7 L583.1,67.1 L588.6,66.6 L594.2,66.2 L599.8,65.9 L605.3,65.6 L610.9,65.4 L616.4,65.3 L622.0,65.2" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,267.7 L71.6,265.2 L77.1,262.8 L82.7,260.3 L88.2,257.8 L93.8,255.3 L99.4,252.9 L104.9,250.4 L110.5,247.9 L116.0,245.4 L121.6,243.0 L127.2,240.5 L132.7,238.0 L138.3,235.5 L143.8,233.1 L149.4,230.6 L155.0,228.1 L160.5,225.6 L166.1,223.2 L171.6,220.7 L177.2,218.2 L182.8,215.7 L188.3,213.3 L193.9,210.8 L199.4,208.3 L205.0,205.9 L210.6,203.4 L216.1,200.9 L221.7,198.4 L227.2,196.0 L232.8,193.5 L238.4,191.0 L243.9,188.5 L249.5,186.1 L255.0,183.6 L260.6,181.1 L266.2,178.6 L271.7,176.2 L277.3,173.7 L282.8,171.2 L288.4,168.7 L294.0,166.3 L299.5,163.8 L305.1,161.3 L310.6,158.8 L316.2,156.4 L321.8,153.9 L327.3,151.4 L332.9,148.9 L338.4,146.5 L344.0,144.0 L349.6,141.5 L355.1,139.1 L360.7,136.6 L366.2,134.1 L371.8,131.6 L377.4,129.2 L382.9,126.7 L388.5,124.2 L394.0,121.7 L399.6,119.3 L405.2,116.8 L410.7,114.3 L416.3,111.8 L421.8,109.4 L427.4,106.9 L433.0,104.4 L438.5,101.9 L444.1,99.5 L449.6,97.0 L455.2,94.5 L460.8,92.0 L466.3,89.6 L471.9,87.1 L477.4,84.6 L483.0,82.1 L488.6,79.7 L494.1,77.2 L499.7,74.7 L505.2,72.3 L510.8,69.8 L516.4,67.3 L521.9,64.8 L527.5,62.4 L533.0,59.9 L538.6,57.4 L544.2,54.9 L549.7,52.5 L555.3,50.0 L560.8,47.5 L566.4,45.0 L572.0,42.6 L577.5,40.1 L583.1,37.6 L588.6,35.1 L594.2,32.7 L599.8,30.2 L605.3,27.7 L610.9,25.2 L616.4,22.8 L622.0,20.3" fill="none" stroke="var(--c1)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<path d="M66.0,174.1 L71.6,173.6 L77.1,173.0 L82.7,172.4 L88.2,171.8 L93.8,171.3 L99.4,170.7 L104.9,170.1 L110.5,169.5 L116.0,168.9 L121.6,168.3 L127.2,167.7 L132.7,167.2 L138.3,166.6 L143.8,166.0 L149.4,165.4 L155.0,164.8 L160.5,164.2 L166.1,163.6 L171.6,163.0 L177.2,162.4 L182.8,161.8 L188.3,161.2 L193.9,160.6 L199.4,160.0 L205.0,159.4 L210.6,158.8 L216.1,158.1 L221.7,157.5 L227.2,156.9 L232.8,156.3 L238.4,155.7 L243.9,155.1 L249.5,154.5 L255.0,153.9 L260.6,153.3 L266.2,152.6 L271.7,152.0 L277.3,151.4 L282.8,150.8 L288.4,150.2 L294.0,149.6 L299.5,148.9 L305.1,148.3 L310.6,147.7 L316.2,147.1 L321.8,146.5 L327.3,145.9 L332.9,145.2 L338.4,144.6 L344.0,144.0 L349.6,143.4 L355.1,142.8 L360.7,142.1 L366.2,141.5 L371.8,140.9 L377.4,140.3 L382.9,139.7 L388.5,139.1 L394.0,138.4 L399.6,137.8 L405.2,137.2 L410.7,136.6 L416.3,136.0 L421.8,135.4 L427.4,134.7 L433.0,134.1 L438.5,133.5 L444.1,132.9 L449.6,132.3 L455.2,131.7 L460.8,131.1 L466.3,130.5 L471.9,129.9 L477.4,129.2 L483.0,128.6 L488.6,128.0 L494.1,127.4 L499.7,126.8 L505.2,126.2 L510.8,125.6 L516.4,125.0 L521.9,124.4 L527.5,123.8 L533.0,123.2 L538.6,122.6 L544.2,122.0 L549.7,121.4 L555.3,120.8 L560.8,120.3 L566.4,119.7 L572.0,119.1 L577.5,118.5 L583.1,117.9 L588.6,117.3 L594.2,116.7 L599.8,116.2 L605.3,115.6 L610.9,115.0 L616.4,114.4 L622.0,113.9" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,174.9 L71.6,174.3 L77.1,173.7 L82.7,173.1 L88.2,172.5 L93.8,171.8 L99.4,171.2 L104.9,170.6 L110.5,170.0 L116.0,169.4 L121.6,168.7 L127.2,168.1 L132.7,167.5 L138.3,166.9 L143.8,166.3 L149.4,165.6 L155.0,165.0 L160.5,164.4 L166.1,163.8 L171.6,163.2 L177.2,162.6 L182.8,161.9 L188.3,161.3 L193.9,160.7 L199.4,160.1 L205.0,159.5 L210.6,158.8 L216.1,158.2 L221.7,157.6 L227.2,157.0 L232.8,156.4 L238.4,155.8 L243.9,155.1 L249.5,154.5 L255.0,153.9 L260.6,153.3 L266.2,152.7 L271.7,152.0 L277.3,151.4 L282.8,150.8 L288.4,150.2 L294.0,149.6 L299.5,148.9 L305.1,148.3 L310.6,147.7 L316.2,147.1 L321.8,146.5 L327.3,145.9 L332.9,145.2 L338.4,144.6 L344.0,144.0 L349.6,143.4 L355.1,142.8 L360.7,142.1 L366.2,141.5 L371.8,140.9 L377.4,140.3 L382.9,139.7 L388.5,139.1 L394.0,138.4 L399.6,137.8 L405.2,137.2 L410.7,136.6 L416.3,136.0 L421.8,135.3 L427.4,134.7 L433.0,134.1 L438.5,133.5 L444.1,132.9 L449.6,132.2 L455.2,131.6 L460.8,131.0 L466.3,130.4 L471.9,129.8 L477.4,129.2 L483.0,128.5 L488.6,127.9 L494.1,127.3 L499.7,126.7 L505.2,126.1 L510.8,125.4 L516.4,124.8 L521.9,124.2 L527.5,123.6 L533.0,123.0 L538.6,122.4 L544.2,121.7 L549.7,121.1 L555.3,120.5 L560.8,119.9 L566.4,119.3 L572.0,118.6 L577.5,118.0 L583.1,117.4 L588.6,116.8 L594.2,116.2 L599.8,115.5 L605.3,114.9 L610.9,114.3 L616.4,113.7 L622.0,113.1" fill="none" stroke="var(--c2)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<line x1="84" y1="30" x2="104" y2="30" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="34" font-size="12" fill="var(--fg)">sin² encoding, c = 1</text>
+<line x1="84" y1="48" x2="104" y2="48" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="5 4"/>
+<text x="110" y="52" font-size="12" fill="var(--fg)">linear target, c = 1</text>
+<line x1="84" y1="66" x2="104" y2="66" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="70" font-size="12" fill="var(--fg)">sin² encoding, c = 0.25</text>
+<line x1="84" y1="84" x2="104" y2="84" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="5 4"/>
+<text x="110" y="88" font-size="12" fill="var(--fg)">linear target, c = 0.25</text>
+</svg></div>
+    <figcaption><b>Figure 6.</b> The encoded probability (solid) against the linear target (dashed). With c = 1 the sine bends visibly at the ends; with c = 0.25 it is almost exact but uses only a quarter of the [0, 1] range.</figcaption>
+  </figure>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="n">7</span>The quantum Heston circuit</h2>
+  <p class="prose">The thesis approximates the Heston path with two price steps and one variance draw. Seven qubits are split into three registers:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Register</th><th>Qubits</th><th class="num">Grid pts</th><th>Law loaded (as stated in the thesis)</th></tr></thead>
+    <tbody>
+      <tr><td>\(v\)</td><td>q0, q3</td><td class="num">4</td><td>\(\mathcal{N}(\mu_v,\sigma_v^2)\), \(\mu_v = v_0 + \kappa(\theta - v_0)T\), \(\sigma_v = \sigma\sqrt{v_0T}\)</td></tr>
+      <tr><td>\(S_1\)</td><td>q1, q4</td><td class="num">4</td><td>log-normal, \(\mu = \ln S_0 + (r - \tfrac12 v_0^2)T\), \(\sigma = v_0\sqrt{T}\)</td></tr>
+      <tr><td>\(S_2\)</td><td>q2, q5, q6</td><td class="num">8</td><td>log-normal given \((S_1, V_1)\): \(\mu = \ln S_1 + (r - \tfrac12V_1^2)\Delta t\), \(\sigma = V_1\sqrt{\Delta t}\)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Each grid is truncated at mean \(\pm 3\) standard deviations (lower bound floored at 0), and the price bounds are widened when needed so that \(K\) lies inside \([\ell_S, h_S]\).</p>
+  <figure>
+    <div class="plate">
+      <svg viewBox="0 0 700 340" width="100%" style="min-width:600px;max-width:700px" role="img" aria-label="quantum circuit">
+        <g font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--fg)">
+          <text x="14" y="44">q₀</text><text x="14" y="84">q₁</text><text x="14" y="124">q₂</text><text x="14" y="164">q₃</text><text x="14" y="204">q₄</text><text x="14" y="244">q₅</text><text x="14" y="284">q₆</text>
+        </g>
+        <g stroke="var(--muted)">
+          <line x1="40" y1="40" x2="560" y2="40"/><line x1="40" y1="80" x2="560" y2="80"/><line x1="40" y1="120" x2="560" y2="120"/><line x1="40" y1="160" x2="560" y2="160"/><line x1="40" y1="200" x2="560" y2="200"/><line x1="40" y1="240" x2="560" y2="240"/><line x1="40" y1="280" x2="560" y2="280"/>
+        </g>
+        <g font-size="13" font-weight="600">
+          <rect x="56" y="26" width="30" height="268" rx="3" fill="var(--panel)" stroke="var(--fg)"/>
+          <text x="71" y="164" text-anchor="middle" fill="var(--fg)">H</text>
+          <rect x="112" y="26" width="72" height="148" rx="3" fill="var(--soft)" stroke="var(--c1)"/>
+          <text x="148" y="98" text-anchor="middle" fill="var(--c1)">𝒫_v</text>
+          <text x="118" y="44" font-size="10" fill="var(--muted)">0</text><text x="118" y="164" font-size="10" fill="var(--muted)">1</text>
+          <rect x="208" y="66" width="72" height="148" rx="3" fill="var(--soft)" stroke="var(--c4)"/>
+          <text x="244" y="138" text-anchor="middle" fill="var(--c4)">𝒫_S₁</text>
+          <text x="214" y="84" font-size="10" fill="var(--muted)">0</text><text x="214" y="204" font-size="10" fill="var(--muted)">1</text>
+          <rect x="304" y="106" width="72" height="188" rx="3" fill="var(--soft)" stroke="var(--c2)"/>
+          <text x="340" y="198" text-anchor="middle" fill="var(--c2)">𝒫_S₂</text>
+          <text x="310" y="124" font-size="10" fill="var(--muted)">0</text><text x="310" y="244" font-size="10" fill="var(--muted)">1</text><text x="310" y="284" font-size="10" fill="var(--muted)">2</text>
+          <rect x="420" y="26" width="72" height="268" rx="3" fill="var(--panel)" stroke="var(--c3)"/>
+          <text x="456" y="164" text-anchor="middle" fill="var(--c3)">F</text>
+        </g>
+        <g fill="var(--c3)"><circle cx="420" cy="40" r="3"/><circle cx="420" cy="80" r="3"/><circle cx="420" cy="120" r="3"/><circle cx="420" cy="240" r="3"/><circle cx="420" cy="280" r="3"/></g>
+        <g font-size="12" fill="var(--muted)">
+          <text x="572" y="44">v bit 0</text>
+          <text x="572" y="84">S₁ bit 0</text>
+          <text x="572" y="124">S₂ bit 0</text>
+          <text x="572" y="164">v bit 1</text>
+          <text x="572" y="204">S₁ bit 1</text>
+          <text x="572" y="244">S₂ bit 1</text>
+          <text x="572" y="284">S₂ bit 2</text>
+        </g>
+        <text x="40" y="314" font-size="12" fill="var(--muted)">Dots mark the wires F reads: q0, q1, q2, q5, q6 (as drawn in thesis Fig. 8.2).</text><text x="40" y="330" font-size="12" fill="var(--muted)">The objective ancilla and the QAE layer 𝒬ᵏ act after F.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 7.</b> The pricing circuit, redrawn from the thesis. Registers are interleaved across wires: v on (q0, q3), S₁ on (q1, q4), S₂ on (q2, q5, q6). Together 𝒫 and F form the state-preparation operator 𝒜 that QAE amplifies.</figcaption>
+  </figure>
+  <p class="prose">Written as one operator, the state prepared before amplitude estimation is</p>
+  <div class="eq">\[ \mathcal{A}|0\rangle = \sum_{a,b,c}\sqrt{p^v_a\,p^{S_1}_b\,p^{S_2}_c}\;|a\rangle_v|b\rangle_{S_1}|c\rangle_{S_2}\Big(\sqrt{1-\tilde f_c}\,|0\rangle + \sqrt{\tilde f_c}\,|1\rangle\Big), \]</div>
+  <p class="prose">where \(\tilde f_c = \sin^2(\tfrac\pi4 + \delta_c)\) is the encoded payoff. QAE then estimates \(\sum p_c^{S_2}\tilde f_c\), and the price is recovered with the rescaling of Section 6.4.</p>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2><span class="n">8</span>Data and calibration results</h2>
+  <p class="prose">End-of-day SPX call chains from optionsDX, 1–30 December 2023. Cleaning removed quotes with zero bid–ask spread, zero days to expiry, zero volume, or more than 252 days to expiry. Strikes were kept within one standard deviation of the spot, and only (day, expiry) groups with more than 120 options were kept. A final filter dropped mid-prices more than one standard deviation from the daily mean. The result is <b>18,828</b> quotes in <b>184</b> slices.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Quote</th><th>Expiry</th><th class="num">ρ</th><th class="num">σ</th><th class="num">θ</th><th class="num">κ</th><th class="num">v₀</th></tr></thead>
+    <tbody>
+      <tr><td>2023-12-01</td><td>2023-12-08</td><td class="num">−0.134</td><td class="num">0.461</td><td class="num">0.0400</td><td class="num">13.77</td><td class="num">8.2e−5</td></tr>
+      <tr><td>2023-12-01</td><td>2023-12-15</td><td class="num">−0.244</td><td class="num">0.604</td><td class="num">0.0421</td><td class="num">7.73</td><td class="num">8.0e−5</td></tr>
+      <tr><td>2023-12-01</td><td>2023-12-29</td><td class="num">−0.359</td><td class="num">0.428</td><td class="num">0.0225</td><td class="num">7.86</td><td class="num">1.6e−4</td></tr>
+      <tr><td>2023-12-01</td><td>2024-01-19</td><td class="num">−0.430</td><td class="num">0.408</td><td class="num">0.0203</td><td class="num">5.55</td><td class="num">3.0e−4</td></tr>
+      <tr><td>2023-12-01</td><td>2024-01-31</td><td class="num">−0.446</td><td class="num">0.397</td><td class="num">0.0227</td><td class="num">4.29</td><td class="num">1.6e−7</td></tr>
+      <tr><td>2023-12-29</td><td>2024-01-31</td><td class="num">−0.437</td><td class="num">0.520</td><td class="num">0.0209</td><td class="num">7.98</td><td class="num">7.7e−5</td></tr>
+      <tr><td>2023-12-29</td><td>2024-02-16</td><td class="num">−0.481</td><td class="num">0.548</td><td class="num">0.0171</td><td class="num">8.47</td><td class="num">2.4e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-02-29</td><td class="num">−0.477</td><td class="num">0.576</td><td class="num">0.0156</td><td class="num">8.18</td><td class="num">3.9e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-03-15</td><td class="num">−0.482</td><td class="num">0.582</td><td class="num">0.0145</td><td class="num">8.17</td><td class="num">4.9e−6</td></tr>
+      <tr><td>2023-12-29</td><td>2024-03-28</td><td class="num">−0.519</td><td class="num">0.427</td><td class="num">0.0213</td><td class="num">3.73</td><td class="num">3.8e−6</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Table 1. First and last five of the 184 calibrated slices (thesis Fig. 8.1).</p>
+  <div class="pair">
+    <figure><div class="plate"><svg viewBox="0 0 420 280" width="100%" style="max-width:420px" role="img" aria-label="rho term structure">
+<line x1="66" y1="230.0" x2="402" y2="230.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="234.0" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.6</text>
+<line x1="66" y1="159.3" x2="402" y2="159.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="163.3" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.4</text>
+<line x1="66" y1="88.7" x2="402" y2="88.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="92.7" text-anchor="end" font-size="11.5" fill="var(--muted)">−0.2</text>
+<line x1="66" y1="18.0" x2="402" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66.0" y1="230" x2="66.0" y2="235" stroke="var(--muted)"/>
+<text x="66.0" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="172.1" y1="230" x2="172.1" y2="235" stroke="var(--muted)"/>
+<text x="172.1" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">30</text>
+<line x1="278.2" y1="230" x2="278.2" y2="235" stroke="var(--muted)"/>
+<text x="278.2" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">60</text>
+<line x1="384.3" y1="230" x2="384.3" y2="235" stroke="var(--muted)"/>
+<text x="384.3" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">90</text>
+<line x1="66" y1="230" x2="402" y2="230" stroke="var(--muted)"/>
+<text x="234" y="272" text-anchor="middle" font-size="12.5" fill="var(--fg)">Days to expiry</text>
+<text transform="translate(14,124) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">ρ</text>
+<path d="M90.8,65.4 L115.5,104.1 L165.0,145.0 L239.3,169.8 L281.7,175.6" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="90.8" cy="65.4" r="3.5" fill="var(--c1)"/>
+<circle cx="115.5" cy="104.1" r="3.5" fill="var(--c1)"/>
+<circle cx="165.0" cy="145.0" r="3.5" fill="var(--c1)"/>
+<circle cx="239.3" cy="169.8" r="3.5" fill="var(--c1)"/>
+<circle cx="281.7" cy="175.6" r="3.5" fill="var(--c1)"/>
+<path d="M182.7,172.5 L239.3,188.1 L285.3,186.7 L338.3,188.2 L384.3,201.5" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="182.7" cy="172.5" r="3.5" fill="var(--c2)"/>
+<circle cx="239.3" cy="188.1" r="3.5" fill="var(--c2)"/>
+<circle cx="285.3" cy="186.7" r="3.5" fill="var(--c2)"/>
+<circle cx="338.3" cy="188.2" r="3.5" fill="var(--c2)"/>
+<circle cx="384.3" cy="201.5" r="3.5" fill="var(--c2)"/>
+<line x1="150" y1="34" x2="170" y2="34" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="176" y="38" font-size="12" fill="var(--fg)">Quote 2023-12-01</text>
+<line x1="150" y1="52" x2="170" y2="52" stroke="var(--c2)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="176" y="56" font-size="12" fill="var(--fg)">Quote 2023-12-29</text>
+</svg></div></figure>
+    <figure><div class="plate"><svg viewBox="0 0 420 280" width="100%" style="max-width:420px" role="img" aria-label="long run vol">
+<line x1="66" y1="230.0" x2="402" y2="230.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="234.0" text-anchor="end" font-size="11.5" fill="var(--muted)">10</text>
+<line x1="66" y1="159.3" x2="402" y2="159.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="163.3" text-anchor="end" font-size="11.5" fill="var(--muted)">14</text>
+<line x1="66" y1="88.7" x2="402" y2="88.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="92.7" text-anchor="end" font-size="11.5" fill="var(--muted)">18</text>
+<line x1="66" y1="18.0" x2="402" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">22</text>
+<line x1="66.0" y1="230" x2="66.0" y2="235" stroke="var(--muted)"/>
+<text x="66.0" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">0</text>
+<line x1="172.1" y1="230" x2="172.1" y2="235" stroke="var(--muted)"/>
+<text x="172.1" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">30</text>
+<line x1="278.2" y1="230" x2="278.2" y2="235" stroke="var(--muted)"/>
+<text x="278.2" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">60</text>
+<line x1="384.3" y1="230" x2="384.3" y2="235" stroke="var(--muted)"/>
+<text x="384.3" y="249" text-anchor="middle" font-size="11.5" fill="var(--muted)">90</text>
+<line x1="66" y1="230" x2="402" y2="230" stroke="var(--muted)"/>
+<text x="234" y="272" text-anchor="middle" font-size="12.5" fill="var(--fg)">Days to expiry</text>
+<text transform="translate(14,124) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">√θ (%)</text>
+<path d="M90.8,53.4 L115.5,44.0 L165.0,142.0 L239.3,154.8 L281.7,140.7" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="90.8" cy="53.4" r="3.5" fill="var(--c1)"/>
+<circle cx="115.5" cy="44.0" r="3.5" fill="var(--c1)"/>
+<circle cx="165.0" cy="142.0" r="3.5" fill="var(--c1)"/>
+<circle cx="239.3" cy="154.8" r="3.5" fill="var(--c1)"/>
+<circle cx="281.7" cy="140.7" r="3.5" fill="var(--c1)"/>
+<path d="M182.7,151.1 L239.3,175.4 L285.3,186.1 L338.3,193.7 L384.3,149.0" fill="none" stroke="var(--c2)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<circle cx="182.7" cy="151.1" r="3.5" fill="var(--c2)"/>
+<circle cx="239.3" cy="175.4" r="3.5" fill="var(--c2)"/>
+<circle cx="285.3" cy="186.1" r="3.5" fill="var(--c2)"/>
+<circle cx="338.3" cy="193.7" r="3.5" fill="var(--c2)"/>
+<circle cx="384.3" cy="149.0" r="3.5" fill="var(--c2)"/>
+</svg></div></figure>
+  </div>
+  <figcaption><b>Figure 8.</b> Term structure of the calibrated correlation ρ (left) and long-run volatility √θ (right), from Table 1.</figcaption>
+  <div class="def amber"><span class="t">Reading the parameters</span>
+    <ul class="prose">
+      <li><b>ρ is always negative and grows in size with maturity</b>, from −0.13 at one week to about −0.5 at three months. This is the leverage effect: falling prices come with rising volatility, which produces the downward-sloping SPX skew.</li>
+      <li><b>√θ sits at 12–20%</b>, a sensible long-run SPX volatility for late 2023. It falls over the month as the market rallied into year-end.</li>
+      <li><b>v₀ is tiny</b> (0.0000002 to 0.0003, i.e. spot vol of 0.04–1.7%), while κ is large (4–14). Fast reversion makes v₀ almost unidentifiable: the optimiser can set it near zero at little cost. This matters for the quantum stage, which builds its price distribution from v₀ (Section 10).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2><span class="n">9</span>Results</h2>
+  <p class="prose">Quantum prices were compared with market mid-prices across the cleaned sample using</p>
+  <div class="eq">\[ \mathrm{MAE} = \frac1n\sum_{i=1}^n|y_i - \hat y_i|, \qquad \mathrm{RMSE} = \sqrt{\frac1n\sum_{i=1}^n(y_i-\hat y_i)^2}. \]</div>
+  <div class="stats" style="max-width:520px">
+    <div class="stat"><span class="v">20.23</span><span class="l">MAE (index points)</span></div>
+    <div class="stat"><span class="v">29.03</span><span class="l">RMSE (index points)</span></div>
+    <div class="stat"><span class="v">1.43</span><span class="l">RMSE / MAE</span></div>
+  </div>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p><b>How to read the numbers.</b> SPX traded around 4,550–4,780 in December 2023, so an ATM one-to-three-month call costs roughly 60–150 points. A mean absolute error of 20 points is therefore large: roughly 15–30% of a typical ATM premium. The ratio RMSE/MAE = 1.43 is close to the value \(\sqrt{\pi/2}\approx1.25\) expected for Gaussian errors, a little higher. So the errors are fairly broad-based with a moderately heavy tail, rather than a few extreme outliers.</p>
+    <p><b>What the thesis attributes it to.</b> (1) Only two Euler steps, because of the qubit budget. (2) Truncation of each distribution to a few grid points and \(\pm3\sigma\) bounds, plus state-preparation error. (3) Parameters chosen from a small predefined set. (4) Limits of the Qiskit APIs for larger circuits.</p>
+    <p>The next section goes one level deeper and identifies, with algebra, which of these dominates.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2><span class="n">10</span>Technical review: where the error comes from</h2>
+  <p class="prose">This section checks the circuit's distribution parameters against the exact moments of the Heston model. Each point is stated as a testable claim, with a suggested fix.</p>
+
+  <div class="review">
+    <div class="ri"><span class="k">R1</span><div>
+      <h3>Price spread is built from v₀ as if it were a volatility<span class="sev h">high</span></h3>
+      <p class="prose">In Heston, \(v\) is a <i>variance</i>. The log-normal for \(S\) uses \(\sigma = v_0\sqrt{T}\) and drift \(r - \tfrac12v_0^2\), which treats \(v_0\) as a volatility. The dimensionally correct choice is \(\sqrt{v_0T}\). Better still, over a horizon the relevant quantity is the <i>integrated</i> variance, because \(v\) reverts to \(\theta\) quickly:</p>
+      <div class="eq">\[ \Sigma^2(T) = \theta T + (v_0-\theta)\frac{1-e^{-\kappa T}}{\kappa}, \qquad \ln S_T \approx \mathcal{N}\big(\ln S_0 + rT - \tfrac12\Sigma^2,\ \Sigma^2\big). \]</div>
+      <p class="prose">For the 2024-01-31 slice (\(v_0 = 1.6\times10^{-7}\), \(T = 61\) days) the thesis formula gives \(\sigma \approx 7\times10^{-8}\). The integrated variance gives \(\Sigma \approx 3.3\%\), an annualised 8.1%. With the first, the price register collapses onto the forward, and an ATM call is priced at its intrinsic forward value, about 33 points. With the second, the same call is worth about 78 points. A 45-point gap on one contract is the same order as the reported MAE.</p>
+    </div></div>
+    <figure>
+      <div class="plate"><svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="terminal price density">
+<line x1="66" y1="250.0" x2="622" y2="250.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="254.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.0</text>
+<line x1="66" y1="172.7" x2="622" y2="172.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="176.7" text-anchor="end" font-size="11.5" fill="var(--muted)">1.0</text>
+<line x1="66" y1="95.3" x2="622" y2="95.3" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="99.3" text-anchor="end" font-size="11.5" fill="var(--muted)">2.0</text>
+<line x1="66" y1="18.0" x2="622" y2="18.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="22.0" text-anchor="end" font-size="11.5" fill="var(--muted)">3.0</text>
+<line x1="116.5" y1="250" x2="116.5" y2="255" stroke="var(--muted)"/>
+<text x="116.5" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,200</text>
+<line x1="217.6" y1="250" x2="217.6" y2="255" stroke="var(--muted)"/>
+<text x="217.6" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,400</text>
+<line x1="318.7" y1="250" x2="318.7" y2="255" stroke="var(--muted)"/>
+<text x="318.7" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,600</text>
+<line x1="419.8" y1="250" x2="419.8" y2="255" stroke="var(--muted)"/>
+<text x="419.8" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">4,800</text>
+<line x1="520.9" y1="250" x2="520.9" y2="255" stroke="var(--muted)"/>
+<text x="520.9" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">5,000</text>
+<line x1="622.0" y1="250" x2="622.0" y2="255" stroke="var(--muted)"/>
+<text x="622.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">5,200</text>
+<line x1="66" y1="250" x2="622" y2="250" stroke="var(--muted)"/>
+<text x="344" y="292" text-anchor="middle" font-size="12.5" fill="var(--fg)">S_T (index points)</text>
+<text transform="translate(14,134) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">density × 10³</text>
+<line x1="318.7" y1="250.0" x2="318.7" y2="18.0" stroke="var(--muted)" stroke-dasharray="4 4"/><text x="312.7" y="29.6" text-anchor="end" font-size="11.5" fill="var(--muted)">K = 4,600</text><line x1="335.5" y1="250.0" x2="335.5" y2="24.0" stroke="var(--c3)" stroke-width="3"/><path d="M330.5,28.0 L335.5,19.0 L340.5,28.0" fill="var(--c3)"/><text x="440.0" y="56.7" font-size="11.5" fill="var(--c3)">σ = v₀√T ≈ 7·10⁻⁸ (thesis):</text><text x="440.0" y="72.7" font-size="11.5" fill="var(--c3)">point mass at F ≈ 4,633</text>
+<path d="M66.0,249.8 L67.4,249.7 L68.8,249.7 L70.2,249.7 L71.6,249.7 L73.0,249.6 L74.4,249.6 L75.8,249.6 L77.1,249.6 L78.5,249.5 L79.9,249.5 L81.3,249.5 L82.7,249.4 L84.1,249.4 L85.5,249.3 L86.9,249.3 L88.3,249.2 L89.7,249.2 L91.1,249.1 L92.5,249.1 L93.9,249.0 L95.3,248.9 L96.7,248.9 L98.1,248.8 L99.4,248.7 L100.8,248.6 L102.2,248.5 L103.6,248.4 L105.0,248.3 L106.4,248.2 L107.8,248.1 L109.2,248.0 L110.6,247.9 L112.0,247.7 L113.4,247.6 L114.8,247.4 L116.2,247.3 L117.6,247.1 L119.0,247.0 L120.3,246.8 L121.7,246.6 L123.1,246.4 L124.5,246.2 L125.9,246.0 L127.3,245.7 L128.7,245.5 L130.1,245.2 L131.5,245.0 L132.9,244.7 L134.3,244.4 L135.7,244.1 L137.1,243.8 L138.5,243.5 L139.9,243.1 L141.2,242.8 L142.6,242.4 L144.0,242.0 L145.4,241.6 L146.8,241.1 L148.2,240.7 L149.6,240.2 L151.0,239.8 L152.4,239.3 L153.8,238.7 L155.2,238.2 L156.6,237.6 L158.0,237.1 L159.4,236.4 L160.8,235.8 L162.2,235.2 L163.5,234.5 L164.9,233.8 L166.3,233.1 L167.7,232.3 L169.1,231.6 L170.5,230.8 L171.9,229.9 L173.3,229.1 L174.7,228.2 L176.1,227.3 L177.5,226.4 L178.9,225.4 L180.3,224.4 L181.7,223.4 L183.1,222.3 L184.4,221.2 L185.8,220.1 L187.2,219.0 L188.6,217.8 L190.0,216.6 L191.4,215.4 L192.8,214.1 L194.2,212.8 L195.6,211.5 L197.0,210.1 L198.4,208.7 L199.8,207.3 L201.2,205.8 L202.6,204.3 L204.0,202.8 L205.3,201.2 L206.7,199.6 L208.1,198.0 L209.5,196.4 L210.9,194.7 L212.3,193.0 L213.7,191.2 L215.1,189.4 L216.5,187.6 L217.9,185.8 L219.3,183.9 L220.7,182.0 L222.1,180.1 L223.5,178.2 L224.9,176.2 L226.3,174.2 L227.6,172.2 L229.0,170.1 L230.4,168.0 L231.8,165.9 L233.2,163.8 L234.6,161.7 L236.0,159.5 L237.4,157.3 L238.8,155.2 L240.2,152.9 L241.6,150.7 L243.0,148.5 L244.4,146.2 L245.8,144.0 L247.2,141.7 L248.5,139.4 L249.9,137.1 L251.3,134.8 L252.7,132.5 L254.1,130.2 L255.5,128.0 L256.9,125.7 L258.3,123.4 L259.7,121.1 L261.1,118.8 L262.5,116.5 L263.9,114.2 L265.3,112.0 L266.7,109.7 L268.1,107.5 L269.4,105.3 L270.8,103.1 L272.2,100.9 L273.6,98.8 L275.0,96.6 L276.4,94.5 L277.8,92.4 L279.2,90.4 L280.6,88.4 L282.0,86.4 L283.4,84.4 L284.8,82.5 L286.2,80.6 L287.6,78.8 L289.0,76.9 L290.4,75.2 L291.7,73.5 L293.1,71.8 L294.5,70.1 L295.9,68.6 L297.3,67.0 L298.7,65.5 L300.1,64.1 L301.5,62.7 L302.9,61.4 L304.3,60.1 L305.7,58.9 L307.1,57.7 L308.5,56.6 L309.9,55.6 L311.3,54.6 L312.6,53.7 L314.0,52.8 L315.4,52.0 L316.8,51.3 L318.2,50.6 L319.6,50.0 L321.0,49.5 L322.4,49.0 L323.8,48.6 L325.2,48.2 L326.6,48.0 L328.0,47.8 L329.4,47.6 L330.8,47.5 L332.2,47.5 L333.5,47.6 L334.9,47.7 L336.3,47.9 L337.7,48.1 L339.1,48.5 L340.5,48.8 L341.9,49.3 L343.3,49.8 L344.7,50.4 L346.1,51.0 L347.5,51.7 L348.9,52.5 L350.3,53.3 L351.7,54.2 L353.1,55.1 L354.5,56.1 L355.8,57.2 L357.2,58.3 L358.6,59.4 L360.0,60.6 L361.4,61.9 L362.8,63.2 L364.2,64.6 L365.6,66.0 L367.0,67.4 L368.4,68.9 L369.8,70.5 L371.2,72.1 L372.6,73.7 L374.0,75.4 L375.4,77.1 L376.7,78.8 L378.1,80.6 L379.5,82.4 L380.9,84.3 L382.3,86.2 L383.7,88.1 L385.1,90.0 L386.5,91.9 L387.9,93.9 L389.3,95.9 L390.7,97.9 L392.1,100.0 L393.5,102.0 L394.9,104.1 L396.3,106.2 L397.6,108.3 L399.0,110.4 L400.4,112.5 L401.8,114.7 L403.2,116.8 L404.6,119.0 L406.0,121.1 L407.4,123.3 L408.8,125.4 L410.2,127.6 L411.6,129.7 L413.0,131.9 L414.4,134.0 L415.8,136.1 L417.2,138.3 L418.6,140.4 L419.9,142.5 L421.3,144.6 L422.7,146.7 L424.1,148.8 L425.5,150.9 L426.9,152.9 L428.3,155.0 L429.7,157.0 L431.1,159.0 L432.5,161.0 L433.9,162.9 L435.3,164.9 L436.7,166.8 L438.1,168.7 L439.5,170.6 L440.8,172.5 L442.2,174.3 L443.6,176.2 L445.0,178.0 L446.4,179.7 L447.8,181.5 L449.2,183.2 L450.6,184.9 L452.0,186.6 L453.4,188.3 L454.8,189.9 L456.2,191.5 L457.6,193.0 L459.0,194.6 L460.4,196.1 L461.7,197.6 L463.1,199.1 L464.5,200.5 L465.9,201.9 L467.3,203.3 L468.7,204.6 L470.1,206.0 L471.5,207.3 L472.9,208.6 L474.3,209.8 L475.7,211.0 L477.1,212.2 L478.5,213.4 L479.9,214.5 L481.3,215.6 L482.7,216.7 L484.0,217.8 L485.4,218.8 L486.8,219.8 L488.2,220.8 L489.6,221.8 L491.0,222.7 L492.4,223.6 L493.8,224.5 L495.2,225.4 L496.6,226.2 L498.0,227.1 L499.4,227.9 L500.8,228.6 L502.2,229.4 L503.6,230.1 L504.9,230.8 L506.3,231.5 L507.7,232.2 L509.1,232.8 L510.5,233.5 L511.9,234.1 L513.3,234.7 L514.7,235.3 L516.1,235.8 L517.5,236.4 L518.9,236.9 L520.3,237.4 L521.7,237.9 L523.1,238.3 L524.5,238.8 L525.8,239.2 L527.2,239.7 L528.6,240.1 L530.0,240.5 L531.4,240.9 L532.8,241.2 L534.2,241.6 L535.6,242.0 L537.0,242.3 L538.4,242.6 L539.8,242.9 L541.2,243.2 L542.6,243.5 L544.0,243.8 L545.4,244.1 L546.8,244.3 L548.1,244.6 L549.5,244.8 L550.9,245.0 L552.3,245.2 L553.7,245.5 L555.1,245.7 L556.5,245.9 L557.9,246.0 L559.3,246.2 L560.7,246.4 L562.1,246.6 L563.5,246.7 L564.9,246.9 L566.3,247.0 L567.7,247.2 L569.0,247.3 L570.4,247.4 L571.8,247.5 L573.2,247.7 L574.6,247.8 L576.0,247.9 L577.4,248.0 L578.8,248.1 L580.2,248.2 L581.6,248.3 L583.0,248.3 L584.4,248.4 L585.8,248.5 L587.2,248.6 L588.6,248.7 L589.9,248.7 L591.3,248.8 L592.7,248.8 L594.1,248.9 L595.5,249.0 L596.9,249.0 L598.3,249.1 L599.7,249.1 L601.1,249.2 L602.5,249.2 L603.9,249.2 L605.3,249.3 L606.7,249.3 L608.1,249.4 L609.5,249.4 L610.9,249.4 L612.2,249.5 L613.6,249.5 L615.0,249.5 L616.4,249.5 L617.8,249.6 L619.2,249.6 L620.6,249.6 L622.0,249.6" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<line x1="84" y1="28" x2="104" y2="28" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="32" font-size="12" fill="var(--fg)">σ² = ∫v dt (integrated variance)</text>
+</svg></div>
+      <figcaption><b>Figure 9.</b> Terminal price law for the 2024-01-31 slice. Thesis parameterisation (red spike) versus integrated-variance log-normal (blue). The option's time value lives in the blue area right of K, which the spike throws away. Illustrative computation with r = 5%.</figcaption>
+    </figure>
+
+    <div class="ri"><span class="k">R2</span><div>
+      <h3>One Euler step overshoots the variance mean<span class="sev m">medium</span></h3>
+      <p class="prose">\(\mu_v = v_0 + \kappa(\theta-v_0)T\) is a first-order expansion of the exact mean \(\theta + (v_0-\theta)e^{-\kappa T}\). The relative error is about \(\tfrac12\kappa T\). With \(\kappa\approx 4\)–\(14\), \(\kappa T\) exceeds 1 within weeks, and the linear mean even passes \(\theta\). It overshoots the level that variance actually reverts to.</p>
+    </div></div>
+    <figure>
+      <div class="plate"><svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="expected variance">
+<line x1="66" y1="250.0" x2="622" y2="250.0" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="254.0" text-anchor="end" font-size="11.5" fill="var(--muted)">0.00</text>
+<line x1="66" y1="183.7" x2="622" y2="183.7" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="187.7" text-anchor="end" font-size="11.5" fill="var(--muted)">0.01</text>
+<line x1="66" y1="117.4" x2="622" y2="117.4" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="121.4" text-anchor="end" font-size="11.5" fill="var(--muted)">0.02</text>
+<line x1="66" y1="51.1" x2="622" y2="51.1" stroke="var(--rule)" stroke-dasharray="2 4"/>
+<text x="58" y="55.1" text-anchor="end" font-size="11.5" fill="var(--muted)">0.03</text>
+<line x1="66.0" y1="250" x2="66.0" y2="255" stroke="var(--muted)"/>
+<text x="66.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.00</text>
+<line x1="145.4" y1="250" x2="145.4" y2="255" stroke="var(--muted)"/>
+<text x="145.4" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.05</text>
+<line x1="224.9" y1="250" x2="224.9" y2="255" stroke="var(--muted)"/>
+<text x="224.9" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.10</text>
+<line x1="304.3" y1="250" x2="304.3" y2="255" stroke="var(--muted)"/>
+<text x="304.3" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.15</text>
+<line x1="383.7" y1="250" x2="383.7" y2="255" stroke="var(--muted)"/>
+<text x="383.7" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.20</text>
+<line x1="463.1" y1="250" x2="463.1" y2="255" stroke="var(--muted)"/>
+<text x="463.1" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.25</text>
+<line x1="542.6" y1="250" x2="542.6" y2="255" stroke="var(--muted)"/>
+<text x="542.6" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.30</text>
+<line x1="622.0" y1="250" x2="622.0" y2="255" stroke="var(--muted)"/>
+<text x="622.0" y="269" text-anchor="middle" font-size="11.5" fill="var(--muted)">0.35</text>
+<line x1="66" y1="250" x2="622" y2="250" stroke="var(--muted)"/>
+<text x="344" y="292" text-anchor="middle" font-size="12.5" fill="var(--fg)">Maturity T (years)</text>
+<text transform="translate(14,134) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--fg)">variance</text>
+<line x1="436.5" y1="250.0" x2="436.5" y2="18.0" stroke="var(--c2)" stroke-dasharray="4 4"/><text x="442.5" y="223.5" font-size="11.5" fill="var(--c2)">κT = 1</text>
+<path d="M66.0,250.0 L73.9,246.8 L81.9,243.7 L89.8,240.6 L97.8,237.6 L105.7,234.7 L113.7,231.9 L121.6,229.1 L129.5,226.3 L137.5,223.6 L145.4,221.0 L153.4,218.4 L161.3,215.9 L169.3,213.4 L177.2,211.0 L185.1,208.7 L193.1,206.4 L201.0,204.1 L209.0,201.9 L216.9,199.7 L224.9,197.6 L232.8,195.5 L240.7,193.5 L248.7,191.5 L256.6,189.6 L264.6,187.7 L272.5,185.8 L280.5,184.0 L288.4,182.2 L296.3,180.4 L304.3,178.7 L312.2,177.0 L320.2,175.4 L328.1,173.8 L336.1,172.2 L344.0,170.7 L351.9,169.2 L359.9,167.7 L367.8,166.3 L375.8,164.9 L383.7,163.5 L391.7,162.1 L399.6,160.8 L407.5,159.5 L415.5,158.2 L423.4,157.0 L431.4,155.8 L439.3,154.6 L447.3,153.4 L455.2,152.3 L463.1,151.2 L471.1,150.1 L479.0,149.0 L487.0,148.0 L494.9,146.9 L502.9,145.9 L510.8,145.0 L518.7,144.0 L526.7,143.1 L534.6,142.1 L542.6,141.2 L550.5,140.4 L558.5,139.5 L566.4,138.7 L574.3,137.8 L582.3,137.0 L590.2,136.2 L598.2,135.5 L606.1,134.7 L614.1,134.0 L622.0,133.2" fill="none" stroke="var(--c1)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,250.0 L73.9,246.8 L81.9,243.6 L89.8,240.3 L97.8,237.1 L105.7,233.9 L113.7,230.7 L121.6,227.4 L129.5,224.2 L137.5,221.0 L145.4,217.8 L153.4,214.6 L161.3,211.3 L169.3,208.1 L177.2,204.9 L185.1,201.7 L193.1,198.5 L201.0,195.2 L209.0,192.0 L216.9,188.8 L224.9,185.6 L232.8,182.3 L240.7,179.1 L248.7,175.9 L256.6,172.7 L264.6,169.5 L272.5,166.2 L280.5,163.0 L288.4,159.8 L296.3,156.6 L304.3,153.3 L312.2,150.1 L320.2,146.9 L328.1,143.7 L336.1,140.5 L344.0,137.2 L351.9,134.0 L359.9,130.8 L367.8,127.6 L375.8,124.4 L383.7,121.1 L391.7,117.9 L399.6,114.7 L407.5,111.5 L415.5,108.2 L423.4,105.0 L431.4,101.8 L439.3,98.6 L447.3,95.4 L455.2,92.1 L463.1,88.9 L471.1,85.7 L479.0,82.5 L487.0,79.3 L494.9,76.0 L502.9,72.8 L510.8,69.6 L518.7,66.4 L526.7,63.1 L534.6,59.9 L542.6,56.7 L550.5,53.5 L558.5,50.3 L566.4,47.0 L574.3,43.8 L582.3,40.6 L590.2,37.4 L598.2,34.1 L606.1,30.9 L614.1,27.7 L622.0,24.5" fill="none" stroke="var(--c3)" stroke-width="2" stroke-dasharray="none" stroke-linejoin="round"/>
+<path d="M66.0,99.7 L622.0,99.7" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="3 4" stroke-linejoin="round"/>
+<line x1="84" y1="28" x2="104" y2="28" stroke="var(--c1)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="32" font-size="12" fill="var(--fg)">exact  E[v_T] = θ + (v₀ − θ)·exp(−κT)</text>
+<line x1="84" y1="46" x2="104" y2="46" stroke="var(--c3)" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="110" y="50" font-size="12" fill="var(--fg)">one Euler step  v₀ + κ(θ − v₀)T  (thesis)</text>
+<line x1="84" y1="64" x2="104" y2="64" stroke="var(--muted)" stroke-width="2.4" stroke-dasharray="3 4"/>
+<text x="110" y="68" font-size="12" fill="var(--fg)">θ</text>
+</svg></div>
+      <figcaption><b>Figure 10.</b> Exact versus one-step Euler mean of v_T for the 2024-01-31 parameters (κ = 4.29, θ = 0.0227). At 61 days the Euler mean is 40% too high; beyond κT = 1 it exceeds θ itself. Fix: load the exact mean, or use several sub-steps.</figcaption>
+    </figure>
+
+    <div class="ri"><span class="k">R3</span><div>
+      <h3>The correlation ρ never enters the circuit<span class="sev h">high</span></h3>
+      <p class="prose">ρ is the parameter that creates the skew, and it is calibrated carefully. But none of the three loaders uses it. In the Euler step the price shock is \(\rho Z^v + \sqrt{1-\rho^2}Z^\perp\). Without it, the quantum model is closer to an uncorrelated stochastic-vol model, which produces a symmetric smile instead of the SPX skew. Fix: recover the variance shock \(Z^v\) from the variance register and load \(S_2\) conditionally, \(\ln S_2\mid(S_1,v,Z^v)\sim\mathcal{N}\big(\ln S_1 + (r-\tfrac12v)\Delta t + \rho\sqrt{v\Delta t}\,Z^v,\ (1-\rho^2)v\Delta t\big)\), or load the joint \((v, S)\) law directly.</p>
+    </div></div>
+
+    <div class="ri"><span class="k">R4</span><div>
+      <h3>Conditioning and wiring in the circuit<span class="sev m">medium</span></h3>
+      <p class="prose">The text says \(S_2\) is drawn given \((S_1, V_1)\). As drawn, however, \(\mathcal{P}_{S_2}\) acts only on (q2, q5, q6) and is not controlled by the v or S₁ registers. So the circuit encodes a product of marginals \(p^v\,p^{S_1}p^{S_2}\), not a Markov chain. Three further points are worth checking in the notebook. The Hadamard layer precedes the loaders, but Qiskit's distribution circuits assume input \(|0\rangle\). The payoff F reads q0 and q1, which are low bits of v and S₁, while the payoff should depend only on \(S_2\) = (q2, q5, q6). And the 2-qubit grid with \(\ell_v = \max(\sigma_v, \mu_v-3\sigma_v)\) puts 98% of the mass on the two middle points.</p>
+    </div></div>
+
+    <div class="ri"><span class="k">R5</span><div>
+      <h3>Statements to tighten<span class="sev l">low</span></h3>
+      <p class="prose">Section 7.2.1 of the thesis states that the QAE error shrinks as \(O(1/\sqrt{M})\). That is the Monte Carlo rate; QAE gives \(O(1/M)\), or \(O(M^{-2/3})\) once the payoff approximation is included. The reflection \(S_0\) should read \(I - 2|0\rangle\langle0|\). The claim that \(\sin y \approx y + \tfrac12\) should be \(\sin^2(\tfrac\pi4+\delta)\approx\tfrac12+\delta\). Finally, the conclusion that quantum methods "reduce computational times dramatically" is a theoretical statement here: no wall-clock or query-count comparison with Heston–FFT or classical Monte Carlo is reported, and the classical Heston–FFT pricing error, the natural benchmark, is not tabulated.</p>
+    </div></div>
+  </div>
+
+  <div class="def warn"><span class="t">Error budget, in one line</span>
+    <div class="eq">\[ \underbrace{|\hat C - C^{\text{mkt}}|}_{\text{reported}} \le \underbrace{|C^{\text{Hes}} - C^{\text{mkt}}|}_{\text{model fit}} + \underbrace{|C^{\text{disc}} - C^{\text{Hes}}|}_{\text{R1–R4: dominant}} + \underbrace{|C^{\text{enc}} - C^{\text{disc}}|}_{O(c^2)} + \underbrace{|\hat C - C^{\text{enc}}|}_{O(\varepsilon/c)} \]</div>
+    <p class="prose">The reported MAE mixes all four terms. Reporting each one separately (Heston–FFT vs market, a classical evaluation of the discretised law vs Heston–FFT, and QAE vs exact statevector) would show exactly where the next qubit should go.</p>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2><span class="n">11</span>Implications and applications</h2>
+  <div class="cards">
+    <div class="card"><h3>The pipeline is sound</h3><p>Calibrate classically, price quantumly is the architecture most industry studies converge on. Calibration is a low-dimensional optimisation where classical tools are already fast; pricing is the high-volume expectation where QAE can help.</p></div>
+    <div class="card"><h3>Discretisation, not QAE, is the bottleneck</h3><p>With ε = 0.02 the QAE term is small next to the error from 2–3 qubits per distribution. Any near-term advantage must first solve state preparation.</p></div>
+    <div class="card"><h3>Speed-up is asymptotic</h3><p>Resource estimates for useful derivative pricing (Chakrabarti et al., 2021) need about 7,500 logical qubits and T-depth of about 54 million. That is fault-tolerant hardware, years away. Today's results are proofs of concept on simulators.</p></div>
+  </div>
+  <h3>Where this kind of result is used</h3>
+  <ul class="prose">
+    <li><b>Path-dependent and multi-asset derivatives</b> (Asian, barrier, basket options), where no Fourier formula exists and Monte Carlo is the default. QAE's advantage grows with dimension because Fourier methods do not scale.</li>
+    <li><b>Risk measures.</b> VaR and CVaR are also expectations of indicator or linear functions, so the same \(\mathcal{A}\) with a comparator payoff gives them (Woerner &amp; Egger, 2019).</li>
+    <li><b>XVA and portfolio revaluation</b>, which require millions of nested expectations and are the most cited target for a future quantum advantage at banks.</li>
+    <li><b>Greeks</b> through quantum gradient estimation, which reuses the same circuit with parameter shifts.</li>
+  </ul>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <h2><span class="n">12</span>Suggested extensions</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Direction</th><th>What to do</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Fix the moments</td><td>Use \(\Sigma^2(T)\) and the exact \(\mathbb{E}[v_T]\); add ρ through the Cholesky shock</td><td>Removes R1–R3 at zero qubit cost</td></tr>
+      <tr><td>Conditional loading</td><td>Controlled loaders \(\mathcal{P}_{S_2\mid S_1,v}\), or Grover–Rudolph on the joint law</td><td>Turns the product of marginals into a true Markov path</td></tr>
+      <tr><td>Better schemes</td><td>Andersen QE or moment-matched schemes for v</td><td>Accurate with one or two large steps</td></tr>
+      <tr><td>Learned loaders</td><td>qGAN or variational circuits trained on the Heston–FFT density</td><td>Shallow circuits, density already exact from Section 4</td></tr>
+      <tr><td>Error decomposition</td><td>Report the four terms of the error budget separately</td><td>Shows which fix pays off</td></tr>
+      <tr><td>Fair benchmark</td><td>Classical MC vs QAE at equal oracle calls; relative errors by moneyness and expiry</td><td>Makes the "quantum vs classical" claim measurable</td></tr>
+      <tr><td>Noise and hardware</td><td>Run with noise models or on IBM hardware; try low-depth variants (MLAE, power-law AE)</td><td>Shows how depth limits the usable k</td></tr>
+      <tr><td>Other products</td><td>Asian/barrier options under Heston; VaR/CVaR; Vietnamese covered warrants</td><td>Where Fourier fails and QAE has room to win</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 13 -->
+<section id="s13">
+  <h2><span class="n">13</span>References</h2>
+  <ul class="prose note">
+    <li>Heston, S. L. (1993). A closed-form solution for options with stochastic volatility. <i>Review of Financial Studies</i>, 6(2), 327–343.</li>
+    <li>Carr, P. &amp; Madan, D. (1999). Option valuation using the fast Fourier transform. <i>Journal of Computational Finance</i>, 2(4).</li>
+    <li>Albrecher, H., Mayer, P., Schoutens, W. &amp; Tistaert, J. (2007). The little Heston trap. <i>Wilmott Magazine</i>.</li>
+    <li>Lord, R., Koekkoek, R. &amp; van Dijk, D. (2010). A comparison of biased simulation schemes for stochastic volatility models. <i>Quantitative Finance</i>, 10(2).</li>
+    <li>Andersen, L. (2008). Simple and efficient simulation of the Heston stochastic volatility model. <i>Journal of Computational Finance</i>, 11(3).</li>
+    <li>Brassard, G., Høyer, P., Mosca, M. &amp; Tapp, A. (2002). Quantum amplitude amplification and estimation. <i>Contemporary Mathematics</i>, 305.</li>
+    <li>Grover, L. &amp; Rudolph, T. (2002). Creating superpositions that correspond to efficiently integrable probability distributions. arXiv:quant-ph/0208112.</li>
+    <li>Woerner, S. &amp; Egger, D. J. (2019). Quantum risk analysis. <i>npj Quantum Information</i>, 5, 15.</li>
+    <li>Stamatopoulos, N. et al. (2020). Option pricing using quantum computers. <i>Quantum</i>, 4, 291.</li>
+    <li>Grinko, D., Gacon, J., Zoufal, C. &amp; Woerner, S. (2021). Iterative quantum amplitude estimation. <i>npj Quantum Information</i>, 7, 52.</li>
+    <li>Chakrabarti, S. et al. (2021). A threshold for quantum advantage in derivative pricing. <i>Quantum</i>, 5, 463.</li>
+    <li>Rebentrost, P., Gupt, B. &amp; Bromley, T. R. (2018). Quantum computational finance: Monte Carlo pricing of financial derivatives. <i>Physical Review A</i>, 98, 022321.</li>
+    <li>Ngô Thiện Mỹ (2024). <i>Quantum versus Classical: A Study of Heston Model in Option Pricing</i>. B.Sc. thesis, International University – VNU-HCM.</li>
+  </ul>
+</section>
+</main>
+</div>
+</div>
+<script>
+(function(){
+  var views={vi:document.getElementById('view-vi'),en:document.getElementById('view-en')};
+  function set(l,save){
+    Object.keys(views).forEach(function(k){views[k].hidden=(k!==l);});
+    var v=views[l];
+    if(v.classList.contains('tex-defer')){
+      v.classList.remove('tex-defer'); v.classList.add('tex-process');
+      if(window.MathJax&&MathJax.typesetPromise){MathJax.typesetPromise([v]).catch(function(){});}
+    }
+    document.documentElement.lang=l;
+    document.querySelectorAll('.langbar button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.lang===l));});
+    if(save){try{localStorage.setItem('qh-lang',l);}catch(e){}}
+  }
+  var init='vi'; try{var s=localStorage.getItem('qh-lang'); if(s==='en'||s==='vi') init=s;}catch(e){}
+  set(init,false);
+  document.querySelectorAll('.langbar button').forEach(function(b){b.addEventListener('click',function(){set(b.dataset.lang,true);window.scrollTo({top:0});});});
+})();
+</script>
+</body></html>
