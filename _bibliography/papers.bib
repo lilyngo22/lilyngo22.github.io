@@ -15,3 +15,16 @@
   selected = {true},
   bibtex_show = {true}
 }
+
+@thesis{ngo2024quantum,
+  abbr = {BSC. Thesis},
+  title = {Quantum versus Classical: A Study of the Heston Model in Option Pricing},
+  author = {Ngô, Thiện Mỹ},
+  school = {International University – VNU-HCM},
+  type = {B.Sc. thesis},
+  year = {2024},
+  abstract = {This thesis builds a quantum circuit that prices European call options under the Heston stochastic-volatility model. Heston parameters are first calibrated classically with FFT pricing on December 2023 SPX options, then fed into a 7-qubit circuit that loads discretised variance and price distributions, encodes the call payoff into an ancilla amplitude, and reads the price with Iterative Quantum Amplitude Estimation. On a simulator the quantum prices reach MAE 20.23 and RMSE 29.03 index points against market prices. The study runs the full pipeline end to end and shows that, at today's qubit counts, discretisation error dominates the theoretical quadratic speed-up of amplitude estimation.},
+  html = {https://lilyngo22.github.io/assets/quantum-vs-classical-heston.html},
+  selected = {true},
+  bibtex_show = {true}
+}
