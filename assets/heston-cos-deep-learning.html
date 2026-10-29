@@ -1,0 +1,323 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Heston–COS & Deep Learning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Spectral:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+<style>
+/* Layout: single reading column (~68ch), figures break slightly wider; numbered sections because the report is a real sequence */
+:root{
+  --paper:#f7f8f9; --ink:#1b2430; --muted:#5b6673; --rule:#d9dee4;
+  --accent:#1f5a8a; --accent-soft:#e3edf6; --hes:#1f5a8a; --bs:#b8643a; --ann:#3d7d5c;
+  --panel:#ffffff;
+  --display:"Instrument Sans",system-ui,sans-serif;
+  --body:"Spectral",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#12171d; --ink:#e3e8ee; --muted:#9aa5b1; --rule:#2c3540;
+  --accent:#7fb3e0; --accent-soft:#1c2a38; --hes:#7fb3e0; --bs:#e09a72; --ann:#7cc4a0; --panel:#181f27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#12171d; --ink:#e3e8ee; --muted:#9aa5b1; --rule:#2c3540;
+  --accent:#7fb3e0; --accent-soft:#1c2a38; --hes:#7fb3e0; --bs:#e09a72; --ann:#7cc4a0; --panel:#181f27; color-scheme:dark}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.62;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:48px 80px}
+main{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.prose{max-width:68ch}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,5vw,40px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:24px;font-weight:600;display:flex;gap:12px;align-items:baseline}
+h2 .n{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:500}
+h3{font-size:17px;font-weight:600;margin-top:8px}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meta{font-family:var(--display);font-size:14px;color:var(--muted)}
+.back{font-family:var(--display);font-size:14px;color:var(--accent);text-decoration:none}
+.back:hover{text-decoration:underline}
+header{display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:28px}
+.tldr{background:var(--accent-soft);padding:18px 20px;border-radius:6px;font-size:17px}
+.tldr strong{font-family:var(--display)}
+.eq{overflow-x:auto;padding:4px 0;color:var(--ink)}
+.note{font-size:15px;color:var(--muted)}
+figure{margin:0;display:flex;flex-direction:column;gap:10px}
+figcaption{font-family:var(--display);font-size:13.5px;color:var(--muted)}
+figcaption b{color:var(--ink)}
+.fig{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:16px;overflow-x:auto}
+svg text{font-family:var(--display)}
+table{border-collapse:collapse;width:100%;font-family:var(--display);font-size:14.5px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;border-bottom:1px solid var(--rule);text-align:left}
+th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+td.num{font-family:var(--mono);text-align:right}
+th.num{text-align:right}
+.tw{overflow-x:auto}
+ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+li::marker{color:var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{border-top:2px solid var(--accent);padding-top:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{margin:0}
+.card p{font-size:16px}
+.flag{border-left:3px solid var(--bs);padding-left:14px;font-size:16.5px}
+code{font-family:var(--mono);font-size:.85em}
+@media (max-width:480px){body{font-size:17px}}
+</style>
+
+<main>
+<header>
+  <a class="back" href="/research/">← Lily Ngo · Research</a>
+  <div class="eyebrow">Báo cáo nghiên cứu · Olympic Kinh tế lượng & Ứng dụng lần VIII, 2023</div>
+  <h1>Calibration và định giá quyền chọn bằng mô hình Heston: thực nghiệm với Deep Learning</h1>
+  <p class="meta">Tôn Nữ Triệu Mẫn · Ngô Thiện Mỹ · Hồ Ngọc Phương Trinh · Nguyễn Gia An — ĐH Quốc Tế, ĐHQG-HCM · GVHD: PGS. TS. Trần Vũ Khanh</p>
+  <div class="tldr prose"><strong>Tóm tắt.</strong> Nhóm calibrate mô hình Heston (định giá bằng phương pháp COS) trên toàn bộ chuỗi quyền chọn SPX năm 2022. Heston–COS khớp giá thị trường tốt hơn Black–Scholes khoảng 10 lần (RMSE 0.43% so với 4.05%). Sau đó một mạng nơ-ron học lại ánh xạ “tham số → giá”, rồi được “chạy ngược” để calibrate. Mạng sai số nhỏ (R² = 0.991), cho thấy có thể thay bộ giải số chậm bằng một mạng nhanh.</div>
+</header>
+
+<section>
+  <h2><span class="n">1</span>Câu hỏi nghiên cứu</h2>
+  <div class="prose" style="display:flex;flex-direction:column;gap:12px">
+    <p>Black–Scholes giả định biến động (volatility) là hằng số. Thị trường thật thì không như vậy: giá quyền chọn cho thấy “nụ cười biến động” (volatility smile) và độ lệch (skew). Bài đặt ra hai câu hỏi.</p>
+    <ul>
+      <li>Trên <b>dữ liệu thật</b>, Heston có đủ tốt để làm mô hình chuẩn (benchmark) thay Black–Scholes không? Phần lớn tài liệu trước chỉ thử trên dữ liệu mô phỏng, tại một thời điểm.</li>
+      <li>Mạng nơ-ron (ANN) có học được hàm định giá Heston từ tham số calibrate thật, và dùng được để calibrate nhanh không?</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>Quy trình tổng thể</h2>
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 740 250" width="100%" style="min-width:600px" role="img" aria-label="Sơ đồ quy trình">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+        <!-- row 1 -->
+        <g font-size="13">
+          <rect x="10" y="20" width="150" height="62" rx="5" fill="var(--paper)" stroke="var(--rule)"/>
+          <text x="85" y="46" text-anchor="middle" fill="var(--ink)" font-weight="600">Chuỗi quyền chọn SPX</text>
+          <text x="85" y="66" text-anchor="middle" fill="var(--muted)" font-size="12">EOD, 03/01–30/12/2022</text>
+
+          <rect x="210" y="20" width="170" height="62" rx="5" fill="var(--accent-soft)" stroke="var(--hes)"/>
+          <text x="295" y="46" text-anchor="middle" fill="var(--ink)" font-weight="600">Calibrate Heston–COS</text>
+          <text x="295" y="66" text-anchor="middle" fill="var(--muted)" font-size="12">L-BFGS-B, khớp giá mid</text>
+
+          <rect x="430" y="20" width="140" height="62" rx="5" fill="var(--paper)" stroke="var(--rule)"/>
+          <text x="500" y="46" text-anchor="middle" fill="var(--ink)" font-weight="600">Bộ tham số Θ</text>
+          <text x="500" y="66" text-anchor="middle" fill="var(--muted)" font-size="12">ρ, κ, θ, γ, v₀</text>
+
+          <rect x="610" y="20" width="120" height="62" rx="5" fill="var(--paper)" stroke="var(--bs)"/>
+          <text x="670" y="46" text-anchor="middle" fill="var(--ink)" font-weight="600">So với BS</text>
+          <text x="670" y="66" text-anchor="middle" fill="var(--muted)" font-size="12">RMSE, MAE</text>
+        </g>
+        <line x1="160" y1="51" x2="208" y2="51" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <line x1="380" y1="51" x2="428" y2="51" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <line x1="570" y1="51" x2="608" y2="51" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <!-- row 2 -->
+        <g font-size="13">
+          <rect x="210" y="160" width="170" height="70" rx="5" fill="var(--panel)" stroke="var(--ann)"/>
+          <text x="295" y="186" text-anchor="middle" fill="var(--ink)" font-weight="600">Forward pass (ANN)</text>
+          <text x="295" y="206" text-anchor="middle" fill="var(--muted)" font-size="12">(Θ, ln S/K, τ) → giá</text>
+          <text x="295" y="222" text-anchor="middle" fill="var(--muted)" font-size="12">train bằng Nadam</text>
+
+          <rect x="430" y="160" width="190" height="70" rx="5" fill="var(--panel)" stroke="var(--ann)"/>
+          <text x="525" y="186" text-anchor="middle" fill="var(--ink)" font-weight="600">Backward pass</text>
+          <text x="525" y="206" text-anchor="middle" fill="var(--muted)" font-size="12">đóng băng trọng số, tối ưu Θ</text>
+          <text x="525" y="222" text-anchor="middle" fill="var(--muted)" font-size="12">bằng L-BFGS-B</text>
+        </g>
+        <path d="M500,82 L500,120 L295,120 L295,158" fill="none" stroke="var(--muted)" marker-end="url(#ar)"/>
+        <text x="400" y="114" text-anchor="middle" font-size="12" fill="var(--muted)">dữ liệu huấn luyện = Θ thật + giá Heston–COS</text>
+        <line x1="380" y1="195" x2="428" y2="195" stroke="var(--muted)" marker-end="url(#ar)"/>
+      </svg>
+    </div>
+    <figcaption><b>Hình 1.</b> Hàng trên: chọn mô hình chuẩn. Hàng dưới: dùng tham số calibrate từ dữ liệu thật để dạy mạng nơ-ron, rồi đảo ngược mạng để calibrate.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Phương pháp</h2>
+
+  <h3>3.1 Black–Scholes (mô hình đối chứng)</h3>
+  <p class="prose">Giá cổ phiếu đi theo chuyển động Brown hình học với biến động σ cố định:</p>
+  <div class="eq">\[ dS_t = \mu S_t\,dt + \sigma S_t\,dW_t \]</div>
+  <p class="prose">Lập danh mục phòng hộ không rủi ro và cấm kinh doanh chênh lệch giá, ta có công thức đóng cho call châu Âu:</p>
+  <div class="eq">\[ C^{BS} = S\,\Phi(d_1) - K e^{-r\tau}\Phi(d_2),\qquad d_{1,2} = \frac{\ln(S/K) + (r \pm \tfrac12\sigma^2)\tau}{\sigma\sqrt{\tau}} \]</div>
+
+  <h3>3.2 Mô hình Heston</h3>
+  <p class="prose">Heston cho phương sai \(v_t\) tự biến động, theo quá trình CIR có hồi quy về trung bình. Dưới độ đo rủi ro trung tính \(\mathbb{Q}\), với \(X_t=\ln S_t\):</p>
+  <div class="eq">\[ \begin{aligned} dX_t &= \big(r - \tfrac12 v_t\big)dt + \sqrt{v_t}\,dW^X_t \\ dv_t &= \kappa(\theta - v_t)\,dt + \gamma\sqrt{v_t}\,dW^v_t \\ dW^X_t\,dW^v_t &= \rho\,dt \end{aligned} \]</div>
+  <div class="tw"><table>
+    <thead><tr><th>Tham số</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td>\(v_0\)</td><td>Phương sai hiện tại</td></tr>
+      <tr><td>\(\theta\)</td><td>Phương sai dài hạn mà \(v_t\) quay về</td></tr>
+      <tr><td>\(\kappa\)</td><td>Tốc độ quay về \(\theta\)</td></tr>
+      <tr><td>\(\gamma\)</td><td>Biến động của biến động (vol-of-vol), quyết định độ “cong” của smile</td></tr>
+      <tr><td>\(\rho\)</td><td>Tương quan giá – biến động; \(\rho<0\) tạo skew nghiêng trái như thị trường cổ phiếu</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Điểm mạnh là mô hình thuộc lớp <i>affine</i>, nên hàm đặc trưng của \(\ln S_T\) có dạng đóng:</p>
+  <div class="eq">\[ \varphi(u) = \exp\!\Big( iur\tau + \tfrac{v_0}{\gamma^2}\tfrac{1-e^{-D\tau}}{1-Ge^{-D\tau}}(\kappa - i\rho\gamma u - D) \Big)\, \exp\!\Big( \tfrac{\kappa\theta}{\gamma^2}\big[\tau(\kappa - i\rho\gamma u - D) - 2\ln\tfrac{1-Ge^{-D\tau}}{1-G}\big] \Big) \]</div>
+  <div class="eq">\[ D = \sqrt{(\kappa - i\rho\gamma u)^2 + (u^2+iu)\gamma^2},\qquad G = \frac{\kappa - i\rho\gamma u - D}{\kappa - i\rho\gamma u + D} \]</div>
+  <p class="prose note">Điều kiện Feller \(2\kappa\theta \ge \gamma^2\) giữ \(v_t>0\). Nhóm bỏ ràng buộc này khi calibrate vì bản không ràng buộc khớp dữ liệu tốt hơn, giống kết quả của Ribeiro & Poulsen (2013).</p>
+
+  <h3>3.3 Phương pháp COS (Fang & Oosterlee)</h3>
+  <p class="prose">Giá quyền chọn là kỳ vọng chiết khấu của payoff. Ta không biết mật độ \(f(y\mid x)\), nhưng biết hàm đặc trưng. COS cắt miền tích phân về \([a,b]\), khai triển mật độ thành chuỗi cosine, và mỗi hệ số chuỗi lấy thẳng từ \(\varphi\):</p>
+  <div class="eq">\[ V(x,t_0) \approx K e^{-r\tau}\,\mathrm{Re}\Big\{ \sum_{k=0}^{N-1}{}' \,\varphi\!\Big(\tfrac{k\pi}{b-a}\Big)\,U_k\,e^{ik\pi\frac{x-a}{b-a}} \Big\},\qquad x = \ln\tfrac{S_0}{K} \]</div>
+  <div class="eq">\[ U_k^{\text{call}} = \tfrac{2}{b-a}\big(\chi_k(0,b) - \psi_k(0,b)\big),\qquad [a,b] = \big[\zeta_1 - L\sqrt{\zeta_2},\ \zeta_1 + L\sqrt{\zeta_2}\big],\ L=10 \]</div>
+  <p class="prose">Ở đây \(\zeta_1,\zeta_2\) là cumulant bậc 1, 2 của \(\ln(S_T/K)\). Lợi thế thực tế: một lần tính cho ra giá của cả vector strike, nên rất hợp cho calibrate.</p>
+
+  <h3>3.4 Calibrate Heston</h3>
+  <p class="prose">Calibrate là bài toán ngược: tìm \(\Theta=(\rho,\gamma,\kappa,\theta,v_0)\) sao cho giá mô hình gần giá mid thị trường nhất:</p>
+  <div class="eq">\[ \Theta^* = \arg\min_{\Theta\in[l,u]} \sum_{i=1}^{N} \omega_i\big(V^{*}_i - V^{\Theta}_i\big)^2,\qquad \omega_i = \tfrac1N \]</div>
+  <p class="prose">Bài toán phi tuyến có ràng buộc cận, được giải bằng <b>L-BFGS-B</b>. Thuật toán này xấp xỉ nghịch đảo Hessian bằng vài cặp \((s_k,y_k)\) gần nhất, thay vì lưu cả ma trận:</p>
+  <div class="eq">\[ H_{k+1} = (I-\rho_k s_k y_k^\top)H_k(I-\rho_k y_k s_k^\top) + \rho_k s_k s_k^\top,\quad \rho_k = \tfrac{1}{y_k^\top s_k} \]</div>
+
+  <h3>3.5 Mạng nơ-ron: forward và backward pass</h3>
+  <p class="prose"><b>Forward pass.</b> Một MLP \(F(\cdot\mid w)\) học ánh xạ từ tham số sang giá Heston–COS:</p>
+  <div class="eq">\[ F\big(\rho,\kappa,\theta,\gamma,v_0,\ \ln\tfrac{S_0}{K},\ \tau \,\big|\, w\big) \approx V^{\text{COS}},\qquad w^* = \arg\min_w \tfrac1n\sum \big(F - V^{\text{COS}}\big)^2 \]</div>
+  <p class="prose">Cấu hình: 4 lớp ẩn × 100 nơ-ron, ReLU, khởi tạo Glorot uniform, tối ưu Nadam (Adam + động lượng Nesterov), batch 1024, 100 epoch.</p>
+  <p class="prose"><b>Backward pass.</b> Đóng băng trọng số \(w^*\). Lúc này các tham số Heston ở lớp đầu vào trở thành biến cần học, tối ưu bằng L-BFGS-B:</p>
+  <div class="eq">\[ \Theta^*_{\text{ANN}} = \arg\min_{\Theta} \tfrac1N\sum_{i}\big(F(\Theta, x_i, \tau_i \mid w^*) - P^*_i\big)^2 \]</div>
+  <p class="prose">Mạng khả vi, nên gradient theo \(\Theta\) có ngay nhờ lan truyền ngược. Đây là lý do calibrate qua mạng nhanh hơn gọi COS lặp lại.</p>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Dữ liệu</h2>
+  <p class="prose">Quyền chọn mua chỉ số S&amp;P 500 (SPX, kiểu châu Âu), dữ liệu cuối ngày từ 03/01/2022 đến 30/12/2022. Dữ liệu được nhóm theo (ngày quote, ngày đáo hạn), mỗi nhóm là một vector strike để COS định giá một lần. Lãi suất phi rủi ro cố định 3.5%. Sai số đo trên giá chuẩn hóa \(V/K\) để các strike khác nhau so sánh được.</p>
+  <p class="prose note">Năm 2022 là năm SPX giảm mạnh và biến động cao, nên đây là phép thử khá khó cho một mô hình volatility hằng số.</p>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Kết quả</h2>
+
+  <h3>5.1 Heston–COS so với Black–Scholes</h3>
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 640 260" width="100%" style="min-width:460px" role="img" aria-label="Biểu đồ RMSE và MAE">
+        <!-- scale: 0..4.5% -> 200px ; baseline y=220 ; px per % = 44.44 -->
+        <g stroke="var(--rule)" stroke-width="1">
+          <line x1="70" y1="220" x2="620" y2="220"/>
+          <line x1="70" y1="175.6" x2="620" y2="175.6" stroke-dasharray="2 4"/>
+          <line x1="70" y1="131.1" x2="620" y2="131.1" stroke-dasharray="2 4"/>
+          <line x1="70" y1="86.7" x2="620" y2="86.7" stroke-dasharray="2 4"/>
+          <line x1="70" y1="42.2" x2="620" y2="42.2" stroke-dasharray="2 4"/>
+        </g>
+        <g font-size="12" fill="var(--muted)" text-anchor="end">
+          <text x="62" y="224">0%</text><text x="62" y="180">1%</text><text x="62" y="135">2%</text><text x="62" y="91">3%</text><text x="62" y="46">4%</text>
+        </g>
+        <!-- RMSE group -->
+        <rect x="130" y="200.8" width="70" height="19.2" fill="var(--hes)"/>
+        <rect x="210" y="40.2" width="70" height="179.8" fill="var(--bs)"/>
+        <text x="165" y="193" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">0.43%</text>
+        <text x="245" y="33" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">4.05%</text>
+        <text x="205" y="244" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600">RMSE</text>
+        <!-- MAE group -->
+        <rect x="380" y="215.4" width="70" height="4.6" fill="var(--hes)"/>
+        <rect x="460" y="89.6" width="70" height="130.4" fill="var(--bs)"/>
+        <text x="415" y="208" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">0.10%</text>
+        <text x="495" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">2.94%</text>
+        <text x="455" y="244" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600">MAE</text>
+        <!-- legend -->
+        <rect x="430" y="14" width="12" height="12" fill="var(--hes)"/><text x="448" y="24" font-size="12.5" fill="var(--ink)">Heston–COS</text>
+        <rect x="540" y="14" width="12" height="12" fill="var(--bs)"/><text x="558" y="24" font-size="12.5" fill="var(--ink)">Black–Scholes</text>
+      </svg>
+    </div>
+    <figcaption><b>Hình 2.</b> Sai số trên giá chuẩn hóa V/K, toàn bộ quyền chọn SPX năm 2022. Heston–COS giảm RMSE khoảng 9 lần và MAE khoảng 28 lần.</figcaption>
+  </figure>
+  <p class="prose">Phân phối sai số (Hình 5–6 trong bài gốc) cho thấy hầu hết sai số của Heston–COS sát 0, chỉ có một số ngoại lai. Sai số của BS trải rộng hơn hẳn, trung vị khoảng 2%. MAE của Heston nhỏ hơn RMSE rất nhiều, nghĩa là sai số tập trung ở vài điểm lớn chứ không rải đều.</p>
+
+  <h3>5.2 Mạng nơ-ron</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Giai đoạn</th><th>So với</th><th class="num">RMSE</th><th class="num">MAE</th><th class="num">R²</th></tr></thead>
+    <tbody>
+      <tr><td>Forward pass (định giá)</td><td>Giá Heston–COS</td><td class="num">5.503%</td><td class="num">3.326%</td><td class="num">0.9908</td></tr>
+      <tr><td>Backward pass (calibrate)</td><td>Giá Heston–COS</td><td class="num">0.482%</td><td class="num">0.336%</td><td class="num">—</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <div class="fig">
+      <canvas id="scatter" width="640" height="320" style="width:100%;max-width:640px;height:auto;display:block;margin:0 auto" aria-label="Biểu đồ phân tán minh họa"></canvas>
+    </div>
+    <figcaption><b>Hình 3.</b> Minh họa dạng của Hình 7–8 trong bài: giá ANN so với giá Heston–COS bám sát đường 45°. Các điểm được mô phỏng lại để thể hiện hình dạng (R² ≈ 0.99), không phải dữ liệu gốc.</figcaption>
+  </figure>
+  <p class="prose">Hiệu năng trên tập test tương đương tập train, nên mạng không bị overfit rõ rệt. Sau backward pass, giá do bộ tham số calibrate qua mạng sinh ra lệch giá chuẩn chỉ khoảng 0.5%.</p>
+</section>
+
+<section>
+  <h2><span class="n">6</span>Ý nghĩa của kết quả</h2>
+  <div class="grid2">
+    <div class="card"><h3>Biến động ngẫu nhiên là cần thiết</h3><p>Khoảng cách 10 lần giữa Heston và BS cho thấy smile/skew là đặc trưng thật của giá SPX. Một σ duy nhất không mô tả được cả bề mặt giá.</p></div>
+    <div class="card"><h3>COS đủ nhanh để chạy cả năm</h3><p>Định giá cả vector strike trong một lần tính giúp calibrate lại hàng ngày trên toàn bộ dữ liệu 2022 là khả thi.</p></div>
+    <div class="card"><h3>ANN thay được bộ giải số</h3><p>R² 0.99 cho thấy mạng học được hàm định giá. Phần tốn kém chuyển sang huấn luyện offline; lúc dùng chỉ còn một lần truyền qua mạng.</p></div>
+    <div class="card"><h3>Calibrate trở thành bài toán khả vi</h3><p>Gradient theo tham số có sẵn từ mạng, nên tối ưu nhanh và ổn định hơn so với lấy sai phân số trên COS.</p></div>
+  </div>
+  <div class="flag prose"><b>Cần đọc kết quả cẩn thận.</b> Heston được calibrate riêng cho từng cặp (ngày, kỳ hạn) và đo sai số ngay trên dữ liệu đã dùng để fit, nên đây là sai số in-sample. BS chỉ có 1 tham số tự do còn Heston có 5, nên một phần chênh lệch đến từ độ linh hoạt. Ngoài ra ANN được đánh giá so với giá Heston–COS, chưa phải so trực tiếp với giá thị trường; và đơn vị của con số 5.5% ở forward pass chưa được nêu rõ.</div>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Ứng dụng thực tế</h2>
+  <ul class="prose">
+    <li><b>Định giá và calibrate thời gian thực</b> trên desk quyền chọn: mạng thay COS/Monte Carlo khi cần định giá hàng nghìn hợp đồng mỗi lần thị trường thay đổi.</li>
+    <li><b>Greeks và quản trị rủi ro</b>: đạo hàm của mạng theo đầu vào (\(\partial V/\partial S\), \(\partial V/\partial v_0\)) có ngay nhờ autodiff, tiện cho phòng hộ delta–vega.</li>
+    <li><b>Xây bề mặt implied volatility</b> nhất quán, không có arbitrage giữa các strike, dùng để định giá sản phẩm ít thanh khoản hoặc OTC.</li>
+    <li><b>Thị trường Việt Nam</b>: khung này áp dụng được cho chứng quyền có bảo đảm (CW) và quyền chọn trên VN30 khi được triển khai, nơi dữ liệu thưa và cần một mô hình có cấu trúc.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">8</span>Gợi ý mở rộng</h2>
+  <ul class="prose">
+    <li><b>Kiểm định out-of-sample</b>: dùng tham số ngày t để định giá ngày t+1, và theo dõi độ ổn định của Θ theo thời gian.</li>
+    <li><b>Trọng số theo thanh khoản</b>: \(\omega_i \propto 1/\text{spread}_i\) hoặc theo vega BS, để option bid–ask rộng ảnh hưởng ít hơn. Hoặc đo sai số trên implied volatility thay vì giá.</li>
+    <li><b>Tối ưu toàn cục</b>: L-BFGS-B chỉ tìm cực tiểu địa phương. Có thể dùng Differential Evolution để khởi tạo, rồi L-BFGS-B tinh chỉnh.</li>
+    <li><b>Học thẳng ánh xạ ngược</b>: mạng nhận cả bề mặt giá và trả về Θ trong một lần chạy, không cần vòng tối ưu.</li>
+    <li><b>Mô hình phong phú hơn</b>: Bates (thêm nhảy), rough Heston / rough Bergomi cho kỳ hạn ngắn, và lãi suất kỳ hạn thay vì cố định 3.5%.</li>
+    <li><b>So sánh công bằng hơn</b>: thêm baseline như SVI hoặc BS với smile nội suy, và báo cáo thời gian chạy của COS so với ANN.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">9</span>Tài liệu chính</h2>
+  <ul class="prose note">
+    <li>Heston, S. L. (1993). A closed-form solution for options with stochastic volatility. <i>Review of Financial Studies</i>.</li>
+    <li>Fang, F. &amp; Oosterlee, C. W. (2008/2010). The COS method: an efficient Fourier method for pricing financial derivatives.</li>
+    <li>Liu, S., Borovykh, A., Grzelak, L. A. &amp; Oosterlee, C. W. (2019). A neural network-based framework for financial model calibration. <i>J. Math. in Industry</i>.</li>
+    <li>Byrd, R. H., Lu, P., Nocedal, J. &amp; Zhu, C. (1995). A limited memory algorithm for bound constrained optimization. <i>SIAM J. Sci. Comput.</i></li>
+    <li>Black, F. &amp; Scholes, M. (1973). The pricing of options and corporate liabilities. <i>JPE</i>.</li>
+  </ul>
+</section>
+</main>
+
+<script>
+(function(){
+  const c=document.getElementById('scatter'); if(!c) return;
+  const ctx=c.getContext('2d');
+  const css=getComputedStyle(document.documentElement);
+  const tok=n=>css.getPropertyValue(n).trim();
+  const W=c.width,H=c.height,L=60,R=20,T=20,B=44,max=1400;
+  const sx=v=>L+(v/max)*(W-L-R), sy=v=>H-B-(v/max)*(H-T-B);
+  ctx.fillStyle=tok('--panel'); ctx.fillRect(0,0,W,H);
+  ctx.font='12px "Instrument Sans", system-ui, sans-serif';
+  ctx.strokeStyle=tok('--rule'); ctx.fillStyle=tok('--muted'); ctx.lineWidth=1;
+  for(let v=0;v<=max;v+=200){
+    ctx.beginPath();ctx.moveTo(L,sy(v));ctx.lineTo(W-R,sy(v));ctx.stroke();
+    ctx.textAlign='right';ctx.fillText(v,L-8,sy(v)+4);
+    ctx.textAlign='center';ctx.fillText(v,sx(v),H-B+18);
+  }
+  ctx.fillText('Giá Heston–COS',(L+W-R)/2,H-8);
+  ctx.save();ctx.translate(14,(T+H-B)/2);ctx.rotate(-Math.PI/2);ctx.fillText('Giá Heston–ANN',0,0);ctx.restore();
+  // deterministic pseudo-random
+  let s=7; const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  const g=()=>{let u=0;for(let i=0;i<6;i++)u+=rnd();return u-3};
+  ctx.fillStyle=tok('--ann'); ctx.globalAlpha=.45;
+  for(let i=0;i<1400;i++){
+    const x=Math.pow(rnd(),2.6)*1300; const y=x+g()*(8+0.035*x);
+    if(y<0||y>max) continue;
+    ctx.beginPath();ctx.arc(sx(x),sy(y),1.6,0,7);ctx.fill();
+  }
+  ctx.globalAlpha=1; ctx.strokeStyle=tok('--bs'); ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(sx(0),sy(0));ctx.lineTo(sx(max),sy(max));ctx.stroke();
+})();
+</script>
+
+</body></html>
